@@ -1,0 +1,8 @@
+@model ProfileDto
+<h1>Hồ sơ khách hàng</h1><p class="subtitle">Thông tin liên hệ và sở thích phục vụ chăm sóc khách hàng.</p>
+<form method="post" action="@(User.IsInRole(Roles.Customer) ? "/Portal/Update" : "/Crm/EditCustomer/" + Model.Id)" class="card stack">@Html.AntiForgeryToken()
+<input type="hidden" name="ConcurrencyToken" value="@Model.ConcurrencyToken"><label>Email</label><input value="@Model.Email" readonly>
+<label>Họ tên</label><input name="FullName" value="@Model.FullName" required maxlength="100"><label>Số điện thoại</label><input name="Phone" value="@Model.Phone" maxlength="10">
+<label>Ngày sinh</label><input name="BirthDate" type="date" value="@Model.BirthDate?.ToString("yyyy-MM-dd")"><label>Địa chỉ</label><input name="Address" value="@Model.Address" maxlength="250">
+<label>Sở thích</label>@foreach(var p in (List<Preference>)ViewBag.Preferences) { <label class="check"><input name="PreferenceIds" type="checkbox" value="@p.Id" checked="@Model.PreferenceIds.Contains(p.Id)">@p.Name</label> }
+<button>Lưu thay đổi</button></form>

@@ -1,0 +1,4 @@
+@model InvitationDto[]
+<h1>Khảo sát nhận được</h1><p class="subtitle">Góp ý của ông giúp quán chọn món mới và cải thiện dịch vụ.</p>
+@foreach(var s in Model){<div class="card"><h2>@s.Title</h2><p>Hạn trả lời: @s.ClosesAtUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm")</p>@if(s.HasResponded){<span class="badge">Đã trả lời</span>}else{<a class="button" href="/Portal/Survey/@s.SurveyId">Mở khảo sát</a>}</div>}
+@if(Model.Length==0){<p class="empty">Chưa có khảo sát được gửi đến tài khoản.</p>}

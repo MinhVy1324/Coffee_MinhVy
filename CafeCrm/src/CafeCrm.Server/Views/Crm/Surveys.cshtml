@@ -1,0 +1,7 @@
+@model SurveyDto[]
+<h1>Khảo sát khách hàng</h1><p class="subtitle">Thăm dò sản phẩm mới và đánh giá sự hài lòng.</p><a class="button" href="/Crm/CreateSurvey">Tạo khảo sát</a>
+@foreach(var s in Model){<article class="card"><h2>@s.Title <span class="badge">@s.Status</span></h2><p>@s.Description</p><p>@s.Questions.Length câu hỏi · Hạn trả lời @s.ClosesAtUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm")</p>
+@if(s.Status == SurveyStatus.Draft){<a class="button ghost" href="/Crm/EditSurvey/@s.Id">Sửa bản nháp</a><form class="inline" action="/Crm/DeleteSurvey" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@s.Id"><input type="hidden" name="version" value="@s.ConcurrencyToken"><button class="danger">Xóa bản nháp</button></form>}
+@if(s.Status != SurveyStatus.Closed && s.ClosesAtUtc > DateTime.UtcNow){<form class="inline" action="/Crm/Publish" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@s.Id"><input type="hidden" name="version" value="@s.ConcurrencyToken"><button>@(s.Status == SurveyStatus.Draft ? "Phát hành và gửi khách hoạt động" : "Gửi khách chưa được mời")</button></form>}
+@if(s.Status == SurveyStatus.Published){<form class="inline" action="/Crm/CloseSurvey" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@s.Id"><input type="hidden" name="version" value="@s.ConcurrencyToken"><button class="ghost">Đóng khảo sát</button></form>}
+<a class="button ghost" href="/Crm/Results/@s.Id">Xem kết quả</a></article>}

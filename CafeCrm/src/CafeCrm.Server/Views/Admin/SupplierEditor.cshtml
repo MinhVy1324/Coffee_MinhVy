@@ -1,0 +1,2 @@
+@model Supplier
+<h1>Thông tin nhà cung cấp</h1><form method="post" class="card stack">@Html.AntiForgeryToken()<label>Tên</label><input name="Name" value="@Model.Name" required maxlength="150"><label>Số điện thoại</label><input name="Phone" value="@Model.Phone"><label>Email</label><input name="Email" value="@Model.Email" type="email"><label class="check"><input name="IsActive" type="checkbox" value="true" checked="@Model.IsActive">Đang hợp tác</label><input name="IsActive" type="hidden" value="false"><button>Lưu nhà cung cấp</button></form>

@@ -1,0 +1,6 @@
+@model ReportDto
+<h1>Tổng quan khách hàng</h1><p class="subtitle">Theo dõi chất lượng chăm sóc và mức độ tham gia khảo sát.</p>
+@if(Model != null) {
+<div class="grid metric"><div class="card">Khách hàng hoạt động<strong>@Model.ActiveCustomers</strong></div><div class="card">Phản hồi đã nhận<strong>@Model.FeedbackCount</strong></div><div class="card">Hài lòng trung bình<strong>@(Model.AverageFeedbackRating?.ToString("0.00") ?? "—") <small>/ 5</small></strong></div></div>
+<div class="card"><h2>Tham gia khảo sát</h2><p>@Model.Responded câu trả lời trên @Model.Invited lời mời.</p><a class="button" href="/Crm/Surveys">Quản lý khảo sát</a></div>
+} else { <div class="card"><h2>Công việc tại quầy</h2><a class="button" href="/Crm/Customers">Tra cứu khách hàng</a> <a class="button ghost" href="/Crm/Feedback">Xử lý phản hồi</a></div> }

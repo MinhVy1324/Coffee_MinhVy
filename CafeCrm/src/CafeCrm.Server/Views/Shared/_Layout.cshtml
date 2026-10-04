@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cafe CRM</title><link rel="stylesheet" href="~/css/site.css"></head>
+<body>
+<aside><div class="brand">CAFE <span>CRM</span></div><p class="muted">Chăm sóc từng khách hàng</p>
+@if (User.IsInRole(Roles.Admin)) {
+    <div class="workspace">QUẢN TRỊ HỆ THỐNG</div><a href="/Admin">Tài khoản và quyền</a><a href="/Admin/Products">Sản phẩm</a><a href="/Admin/Suppliers">Nhà cung cấp</a>
+} else if (User.IsInRole(Roles.Manager) || User.IsInRole(Roles.Staff)) {
+    <div class="workspace">NGHIỆP VỤ CRM</div><a href="/Crm">Tổng quan</a><a href="/Crm/Customers">Khách hàng</a><a href="/Crm/Feedback">Phản hồi</a>
+    @if (User.IsInRole(Roles.Manager)) { <a href="/Crm/Surveys">Khảo sát</a><a href="/Crm/Reports">Báo cáo khách hàng</a> }
+} else if (User.IsInRole(Roles.Customer)) {
+    <div class="workspace">KHÁCH HÀNG</div><a href="/Portal">Hồ sơ của tôi</a><a href="/Portal/Feedback">Phản hồi của tôi</a><a href="/Portal/Surveys">Khảo sát nhận được</a>
+}
+</aside><div class="shell"><header><span>CRM quán cà phê</span><span>@User.Identity?.Name</span>
+@if (User.Identity?.IsAuthenticated == true) { <form action="/Account/Logout" method="post">@Html.AntiForgeryToken()<button class="ghost">Đăng xuất</button></form> }</header>
+<main>@if (TempData["Message"] is string message) { <p class="notice">@message</p> } @RenderBody()</main>
+<footer>Đồ án Hệ thống thông tin · Web và ứng dụng Android</footer></div>
+@await RenderSectionAsync("Scripts",required:false)
+</body></html>

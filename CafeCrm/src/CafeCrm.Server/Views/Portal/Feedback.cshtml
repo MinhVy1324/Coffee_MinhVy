@@ -1,0 +1,3 @@
+@model FeedbackDto[]
+<h1>Phản hồi của tôi</h1><form method="post" class="card stack">@Html.AntiForgeryToken()<label>Sản phẩm</label><select name="productId"><option value="">Dịch vụ chung của quán</option>@foreach(var p in (List<Product>)ViewBag.Products){<option value="@p.Id">@p.Name</option>}</select><label>Đánh giá</label><select name="rating">@for(var i=5;i>=1;i--){<option value="@i">@i / 5</option>}</select><label>Nội dung</label><textarea name="content" required maxlength="2000"></textarea><button>Gửi phản hồi</button></form>
+@foreach(var f in Model){<div class="card"><h2>@(f.ProductName ?? "Dịch vụ") <span class="badge">@f.Status</span></h2><p>@f.Content</p>@foreach(var r in f.Replies){<p><strong>Quán trả lời</strong>: @r.Content</p>}</div>}

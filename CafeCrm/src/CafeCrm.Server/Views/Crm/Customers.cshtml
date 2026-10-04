@@ -1,0 +1,11 @@
+@model CustomerRow[]
+<h1>Khách hàng</h1><p class="subtitle">Tra cứu hồ sơ, cập nhật sở thích và quản lý trạng thái tài khoản.</p>
+<form method="get" class="toolbar"><input name="search" placeholder="Tên, email hoặc số điện thoại"><button>Tìm kiếm</button><a class="button ghost" href="/Crm/CreateCustomer">Thêm khách hàng</a><a href="?archived=true">Hồ sơ đã lưu trữ</a></form>
+<div class="card"><table><thead><tr><th>Khách hàng</th><th>Liên hệ</th><th>Ngày sinh</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>
+@foreach(var c in Model) { <tr><td>@c.FullName<small>@c.Email</small></td><td>@(c.Phone ?? "Chưa có")</td><td>@c.BirthDate</td><td><span class="badge">@(c.IsDeleted ? "Đã lưu trữ" : c.IsDisabled ? "Đã khóa" : "Hoạt động")</span></td><td>
+@if(!c.IsDeleted) { <a href="/Crm/EditCustomer/@c.Id">Sửa hồ sơ</a>
+@if(User.IsInRole(Roles.Manager)) {
+<form class="inline" action="/Crm/LockCustomer" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@c.Id"><input type="hidden" name="disabled" value="@(!c.IsDisabled)"><button class="ghost">@(c.IsDisabled ? "Mở khóa" : "Khóa")</button></form>
+<form class="inline" action="/Crm/ArchiveCustomer" method="post" onsubmit="return confirm('Lưu trữ hồ sơ và khóa tài khoản khách hàng?')">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@c.Id"><input type="hidden" name="version" value="@c.ConcurrencyToken"><button class="danger">Xóa</button></form>
+} }</td></tr> }
+</tbody></table>@if(Model.Length == 0){<p class="empty">Không có khách hàng phù hợp.</p>}</div>

@@ -1,0 +1,9 @@
+@model UserRow[]
+<h1>Quản trị tài khoản</h1><p class="subtitle">Không gian Admin riêng cho quản trị hệ thống và phân quyền.</p>
+<form class="toolbar" method="get"><input name="search" placeholder="Tìm theo email"><button>Tìm kiếm</button></form>
+<div class="card"><table><thead><tr><th>Email</th><th>Vai trò</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>
+@foreach(var u in Model){<tr><td>@u.Email</td><td>@string.Join(", ",u.Roles)</td><td><span class="badge">@(u.IsDisabled ? "Đã khóa hoặc ngừng sử dụng" : "Hoạt động")</span></td><td>
+<form class="inline" action="/Admin/Lock" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@u.Id"><input type="hidden" name="disabled" value="@(!u.IsDisabled)"><button class="ghost">@(u.IsDisabled ? "Mở khóa" : "Khóa hoặc xóa")</button></form>
+@if(!u.Roles.Contains(Roles.Customer)){<form class="inline" action="/Admin/Role" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@u.Id"><select name="role">@foreach(var role in Roles.All.Where(x=>x!=Roles.Customer)){<option selected="@u.Roles.Contains(role)">@role</option>}</select><button>Đổi quyền</button></form>}
+</td></tr>}</tbody></table></div>
+<form class="card stack" action="/Admin/CreateUser" method="post">@Html.AntiForgeryToken()<h2>Tạo tài khoản</h2><label>Email</label><input name="email" type="email" required><label>Mật khẩu ban đầu</label><input name="initialPassword" type="password" minlength="8" required><label>Vai trò</label><select name="role">@foreach(var role in Roles.All){<option>@role</option>}</select><button>Tạo tài khoản</button></form>

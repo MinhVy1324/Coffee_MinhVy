@@ -1,0 +1,8 @@
+@model SurveyDto
+<h1>@Model.Title</h1><p class="subtitle">@Model.Description</p>
+<form method="post" class="card stack">@Html.AntiForgeryToken()
+@foreach(var q in Model.Questions){<div class="question"><h2>@q.Text @(q.IsRequired ? "*" : "")</h2>
+@if(q.Kind == QuestionKind.Text){<textarea name="q_@q.Id" maxlength="2000" required="@q.IsRequired"></textarea>}
+else if(q.Kind == QuestionKind.Rating){<select name="q_@q.Id" required="@q.IsRequired"><option value="">Chọn điểm</option>@for(var i=1;i<=5;i++){<option value="@i">@i / 5</option>}</select>}
+else{foreach(var o in q.Options){<label class="check"><input type="@(q.Kind == QuestionKind.SingleChoice ? "radio" : "checkbox")" name="q_@q.Id" value="@o.Id">@o.Text</label>}}
+</div>}<button>Gửi câu trả lời</button></form>

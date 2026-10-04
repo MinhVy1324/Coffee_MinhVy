@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <OutputType>Exe</OutputType><RootNamespace>CafeCrm.Mobile</RootNamespace>
+    <UseMaui>true</UseMaui><SingleProject>true</SingleProject>
+    <ApplicationTitle>Cafe CRM</ApplicationTitle><ApplicationId>vn.student.cafecrm</ApplicationId>
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion><ApplicationVersion>1</ApplicationVersion>
+    <SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
+    <AndroidManifest Condition="'$(Configuration)' == 'Debug'">Platforms/Android/AndroidManifest.Debug.xml</AndroidManifest>
+  </PropertyGroup>
+  <ItemGroup>
+    <MauiIcon Include="Resources/AppIcon/appicon.svg" Color="#255C47" />
+    <MauiSplashScreen Include="Resources/Splash/splash.svg" Color="#255C47" BaseSize="128,128" />
+    <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+    <ProjectReference Include="../CafeCrm.Client/CafeCrm.Client.csproj" />
+  </ItemGroup>
+</Project>

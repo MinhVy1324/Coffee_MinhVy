@@ -1,0 +1,6 @@
+@model SurveyResults
+<h1>Kết quả khảo sát</h1><p class="subtitle">@Model.Title</p><div class="grid metric"><div class="card">Đã mời<strong>@Model.Invited</strong></div><div class="card">Đã trả lời<strong>@Model.Responded</strong></div><div class="card">Tỷ lệ tham gia<strong>@Model.ResponseRate%</strong></div></div>
+@foreach(var q in Model.Questions){<div class="card"><h2>@q.Text</h2><p>@q.Answered lượt trả lời @(q.AverageRating == null ? "" : "· Điểm trung bình " + q.AverageRating + "/5")</p>
+@foreach(var o in q.Options){<p>@o.Text · @o.Count lượt · @o.Percentage%</p><div class="bar"><span style="width:@(o.Percentage.ToString(System.Globalization.CultureInfo.InvariantCulture))%"></span></div>}
+@foreach(var t in q.TextAnswers){<p>@t</p>}</div>}
+<p class="muted">Tỷ lệ mỗi lựa chọn tính trên số người trả lời câu đó. Câu nhiều lựa chọn có tổng tỷ lệ vượt 100%.</p>

@@ -1,0 +1,5 @@
+<h1>Đăng ký khách hàng</h1><p class="subtitle">Nhận khảo sát và gửi góp ý cho quán.</p>
+<form method="post" class="card stack">@Html.AntiForgeryToken()
+<label>Họ tên</label><input name="fullName" maxlength="100" required>
+<label>Email</label><input name="email" type="email" required><label>Mật khẩu</label><input name="password" type="password" minlength="8" required>
+<p class="muted">Ít nhất 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt.</p><button>Đăng ký</button></form>

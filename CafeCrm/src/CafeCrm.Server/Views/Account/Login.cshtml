@@ -1,0 +1,5 @@
+<h1>Đăng nhập Cafe CRM</h1><p class="subtitle">Dùng tài khoản được cấp để vào đúng không gian làm việc.</p>
+<div class="card stack"><form method="post">@Html.AntiForgeryToken()
+<p class="error">@ViewBag.Error</p><label>Email</label><input name="email" type="email" autocomplete="username" required>
+<label>Mật khẩu</label><input name="password" type="password" autocomplete="current-password" required>
+<button>Đăng nhập</button></form><p>Khách hàng mới? <a href="/Account/Register">Đăng ký tài khoản</a></p></div>

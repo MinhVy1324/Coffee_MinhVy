@@ -1,0 +1,8 @@
+@model FeedbackDto[]
+<h1>Phản hồi khách hàng</h1><p class="subtitle">Tiếp nhận góp ý và ghi nhận cách xử lý.</p>
+<form method="get" class="toolbar"><select name="status"><option value="">Tất cả trạng thái</option>@foreach(var s in Enum.GetValues<FeedbackStatus>()){<option value="@s">@s</option>}</select><button>Lọc</button></form>
+@foreach(var f in Model){<article class="card"><h2>@f.CustomerName <span class="badge">@f.Status</span></h2><p>@(f.ProductName ?? "Dịch vụ của quán") · @f.Rating/5 · @f.CreatedAtUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm")</p><p>@f.Content</p>
+@foreach(var r in f.Replies){<p><strong>@r.Author</strong>: @r.Content</p>}
+@if(f.Status != FeedbackStatus.Closed){<form action="/Crm/Reply" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@f.Id"><input type="hidden" name="concurrencyToken" value="@f.ConcurrencyToken"><label>Trả lời khách hàng</label><textarea name="content" required maxlength="2000"></textarea><label>Trạng thái sau xử lý</label><select name="status"><option value="InProgress">Đang xử lý</option><option value="Resolved">Đã giải quyết</option><option value="Closed">Đóng phản hồi</option></select><button>Gửi trả lời</button></form>}
+</article>}
+@if(Model.Length == 0){<p class="empty">Chưa có phản hồi phù hợp.</p>}

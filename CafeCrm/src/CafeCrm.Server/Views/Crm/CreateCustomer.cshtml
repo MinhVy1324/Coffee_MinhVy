@@ -1,0 +1,3 @@
+<h1>Thêm khách hàng</h1><form method="post" class="card stack">@Html.AntiForgeryToken()
+<label>Họ tên</label><input name="fullName" required maxlength="100"><label>Email</label><input name="email" type="email" required>
+<label>Mật khẩu ban đầu</label><input name="initialPassword" type="password" required minlength="8"><p class="muted">Bàn giao mật khẩu trực tiếp cho khách.</p><button>Tạo hồ sơ</button></form>

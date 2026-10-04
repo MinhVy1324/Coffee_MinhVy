@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CafeCrm.Client/CafeCrm.Client.csproj" />
+    <Project Path="src/CafeCrm.Contracts/CafeCrm.Contracts.csproj" />
+    <Project Path="src/CafeCrm.Mobile/CafeCrm.Mobile.csproj" />
+    <Project Path="src/CafeCrm.Server/CafeCrm.Server.csproj" />
+  </Folder>
+</Solution>
