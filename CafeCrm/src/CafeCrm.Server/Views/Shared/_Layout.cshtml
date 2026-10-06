@@ -1,19 +1,108 @@
-<!doctype html>
-<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Cafe CRM</title><link rel="stylesheet" href="~/css/site.css"></head>
-<body>
-<aside><div class="brand">CAFE <span>CRM</span></div><p class="muted">Chăm sóc từng khách hàng</p>
-@if (User.IsInRole(Roles.Admin)) {
-    <div class="workspace">QUẢN TRỊ HỆ THỐNG</div><a href="/Admin">Tài khoản và quyền</a><a href="/Admin/Products">Sản phẩm</a><a href="/Admin/Suppliers">Nhà cung cấp</a>
-} else if (User.IsInRole(Roles.Manager) || User.IsInRole(Roles.Staff)) {
-    <div class="workspace">NGHIỆP VỤ CRM</div><a href="/Crm">Tổng quan</a><a href="/Crm/Customers">Khách hàng</a><a href="/Crm/Feedback">Phản hồi</a>
-    @if (User.IsInRole(Roles.Manager)) { <a href="/Crm/Surveys">Khảo sát</a><a href="/Crm/Reports">Báo cáo khách hàng</a> }
-} else if (User.IsInRole(Roles.Customer)) {
-    <div class="workspace">KHÁCH HÀNG</div><a href="/Portal">Hồ sơ của tôi</a><a href="/Portal/Feedback">Phản hồi của tôi</a><a href="/Portal/Surveys">Khảo sát nhận được</a>
+@{
+    var signedIn = User.Identity?.IsAuthenticated == true;
+    var action = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+    var isAdmin = User.IsInRole(Roles.Admin);
+    var isManager = User.IsInRole(Roles.Manager);
+    var isCustomer = User.IsInRole(Roles.Customer);
+    var roleLabel = isAdmin ? "Quản trị viên" : isManager ? "Quản lý" : isCustomer ? "Khách hàng" : "Nhân viên";
+    var workspace = isAdmin ? "QUẢN TRỊ HỆ THỐNG" : isCustomer ? "GÓC KHÁCH HÀNG" : "KHÔNG GIAN LÀM VIỆC";
+    var navigation = new List<(string Url, string Icon, string Label, string Section)>();
+    if (isAdmin)
+    {
+        navigation.AddRange(new[] { ("/Admin", "users", "Tài khoản & quyền", "accounts"), ("/Admin/Products", "cup", "Sản phẩm", "products"), ("/Admin/Suppliers", "truck", "Nhà cung cấp", "suppliers") });
+    }
+    else if (isCustomer)
+    {
+        navigation.AddRange(new[] { ("/Portal", "dashboard", "Góc của tôi", "overview"), ("/Portal/Profile", "user", "Hồ sơ của tôi", "profile"), ("/Portal/Feedback", "message", "Phản hồi của tôi", "feedback"), ("/Portal/Surveys", "clipboard", "Khảo sát của tôi", "surveys"), ("/Portal/ChangePassword", "shield", "Đổi mật khẩu", "security") });
+    }
+    else if (signedIn)
+    {
+        navigation.AddRange(new[] { ("/Crm", "dashboard", "Tổng quan", "overview"), ("/Crm/Customers", "users", "Khách hàng", "customers"), ("/Crm/Feedback", "message", "Phản hồi", "feedback") });
+        if (isManager) navigation.AddRange(new[] { ("/Crm/Surveys", "clipboard", "Khảo sát", "surveys"), ("/Crm/Reports", "chart", "Báo cáo", "reports") });
+    }
+    var section = action.Contains("Product") ? "products" : action.Contains("Supplier") ? "suppliers" : action.Contains("Customer") ? "customers" : action.Contains("Survey") || action == "Results" ? "surveys" : action == "Feedback" ? "feedback" : action == "Reports" ? "reports" : action == "ChangePassword" ? "security" : isAdmin ? "accounts" : isCustomer && action is "Profile" or "Update" ? "profile" : "overview";
+    var currentPage = navigation.FirstOrDefault(item => item.Section == section).Label ?? "Cafe CRM";
+    var title = ViewData["Title"]?.ToString() ?? currentPage;
+    var email = User.Identity?.Name ?? "";
+    var avatar = email.Length > 0 ? email[..1].ToUpperInvariant() : "C";
+    var today = DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(7));
 }
-</aside><div class="shell"><header><span>CRM quán cà phê</span><span>@User.Identity?.Name</span>
-@if (User.Identity?.IsAuthenticated == true) { <form action="/Account/Logout" method="post">@Html.AntiForgeryToken()<button class="ghost">Đăng xuất</button></form> }</header>
-<main>@if (TempData["Message"] is string message) { <p class="notice">@message</p> } @RenderBody()</main>
-<footer>Đồ án Hệ thống thông tin · Web và ứng dụng Android</footer></div>
-@await RenderSectionAsync("Scripts",required:false)
-</body></html>
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#174e3c">
+    <title>@title · Cafe CRM</title>
+    <link rel="icon" type="image/svg+xml" href="~/img/favicon.svg">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true">
+    <script src="~/js/site.js" asp-append-version="true" defer></script>
+</head>
+<body class="@(signedIn ? "app-page" : "auth-page")">
+<a class="skip-link" href="#main-content">Đến nội dung chính</a>
+@if (signedIn)
+{
+    <aside class="sidebar" id="sidebar" aria-label="Điều hướng chính">
+        <a class="brand" href="/" aria-label="Cafe CRM, trang chủ">
+            <span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#cup" /></svg></span>
+            <span>Cafe<span class="brand-accent">CRM</span><small>Kết nối từ những điều nhỏ</small></span>
+        </a>
+        <p class="workspace">@workspace</p>
+        <nav class="sidebar-nav">
+            @foreach (var item in navigation)
+            {
+                <a class="nav-link @(item.Section == section ? "active" : "")" href="@item.Url" aria-current="@(item.Section == section ? "page" : null)">
+                    <svg class="icon" aria-hidden="true"><use href="/img/icons.svg#@item.Icon" /></svg>
+                    <span>@item.Label</span>
+                    @if (item.Section == section) { <span class="nav-dot" aria-hidden="true"></span> }
+                </a>
+            }
+        </nav>
+        <div class="sidebar-bottom">
+            <div class="sidebar-note">
+                <svg class="icon" aria-hidden="true"><use href="/img/icons.svg#leaf" /></svg>
+                <strong>Mỗi kết nối, một giá trị.</strong>
+                <p>Cùng tạo nên trải nghiệm tốt hơn mỗi ngày.</p>
+            </div>
+            <div class="sidebar-account"><span class="avatar">@avatar</span><div><strong>@roleLabel</strong><small>@email</small></div></div>
+        </div>
+    </aside>
+    <button type="button" class="nav-backdrop" data-close-nav aria-label="Đóng menu" tabindex="-1"></button>
+    <div class="shell">
+        <header class="app-header">
+            <button type="button" class="icon-button mobile-menu" id="menu-toggle" aria-controls="sidebar" aria-expanded="false" aria-label="Mở menu">
+                <svg class="icon" aria-hidden="true"><use href="/img/icons.svg#menu" /></svg>
+            </button>
+            <div class="breadcrumb"><span>Không gian @roleLabel.ToLowerInvariant()</span><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#chevron-right" /></svg><strong>@currentPage</strong></div>
+            <div class="header-right">
+                <time class="header-date" datetime="@today.ToString("yyyy-MM-dd")"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#calendar" /></svg>@today.ToString("dd/MM/yyyy")</time>
+                <details class="account-menu">
+                    <summary><span class="avatar">@avatar</span><span class="header-account"><strong>@roleLabel</strong><small>@email</small></span><svg class="icon chevron" aria-hidden="true"><use href="/img/icons.svg#chevron-down" /></svg></summary>
+                    <div class="account-dropdown"><strong>@roleLabel</strong><p>@email</p><form action="/Account/Logout" method="post">@Html.AntiForgeryToken()<button type="submit" class="ghost"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#logout" /></svg>Đăng xuất</button></form></div>
+                </details>
+            </div>
+        </header>
+        <main id="main-content" tabindex="-1">
+            @if (TempData["Message"] is string message) { <div class="notice" role="status"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#check-circle" /></svg>@message</div> }
+            @if (TempData["Error"] is string error) { <div class="notice notice-error" role="alert">@error</div> }
+            @RenderBody()
+        </main>
+        <footer class="app-footer"><span>Cafe CRM <span class="footer-dot">·</span> Chăm sóc từng khách hàng</span><span>Một kết nối tốt. Một trải nghiệm tốt hơn.</span></footer>
+    </div>
+}
+else
+{
+    <div class="auth-shell">
+        <section class="auth-story" aria-label="Giới thiệu Cafe CRM">
+            <a class="brand" href="/"><span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#cup" /></svg></span><span>Cafe<span class="brand-accent">CRM</span></span></a>
+            <div class="auth-story-content"><span class="eyebrow">KẾT NỐI TỪ NHỮNG ĐIỀU NHỎ</span><h2>Một tách cà phê.<br>Nhiều hơn một<br><em>kết nối.</em></h2><p>Lắng nghe, thấu hiểu và chăm sóc khách hàng.<br>Cùng xây dựng những trải nghiệm đáng nhớ.</p>
+                <div class="coffee-art" aria-hidden="true"><svg viewBox="0 0 360 220" fill="none"><ellipse cx="180" cy="190" rx="140" ry="15" fill="#d6deca"/><ellipse cx="177" cy="177" rx="109" ry="17" fill="#e3e8d8" stroke="#b7c6ae" stroke-width="2"/><path d="M246 88h19c43 0 43 63 3 63h-26" stroke="#7b9c7f" stroke-width="13"/><path d="M96 83h155l-9 67c-3 23-23 36-66 36s-65-13-69-36z" fill="#fefdf7" stroke="#7b9c7f" stroke-width="3"/><ellipse cx="174" cy="83" rx="78" ry="17" fill="#e5d6bb" stroke="#7b9c7f" stroke-width="3"/><ellipse cx="174" cy="83" rx="65" ry="11" fill="#755743"/><path d="M150 50c-22-20 17-23 0-43M178 50c-22-20 17-23 0-43M205 50c-22-20 17-23 0-43" stroke="#a6b99b" stroke-width="3" stroke-linecap="round"/><path d="M159 126c10-14 27-14 37 0-10 14-27 14-37 0z" fill="#255c47"/><path d="M167 132l19-12" stroke="#fefdf7" stroke-width="2" stroke-linecap="round"/></svg></div>
+            </div>
+            <p class="auth-story-footer">Dành cho quán cà phê và những khách hàng thân quen.</p>
+        </section>
+        <div class="auth-content"><main id="main-content" tabindex="-1">@if (TempData["Message"] is string message) { <div class="notice" role="status">@message</div> }@RenderBody()</main><footer>Cafe CRM · Chăm sóc từng khách hàng</footer></div>
+    </div>
+}
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

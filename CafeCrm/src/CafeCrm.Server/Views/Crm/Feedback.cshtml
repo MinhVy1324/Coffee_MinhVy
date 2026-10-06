@@ -1,8 +1,27 @@
 @model FeedbackDto[]
-<h1>Phản hồi khách hàng</h1><p class="subtitle">Tiếp nhận góp ý và ghi nhận cách xử lý.</p>
-<form method="get" class="toolbar"><select name="status"><option value="">Tất cả trạng thái</option>@foreach(var s in Enum.GetValues<FeedbackStatus>()){<option value="@s">@s</option>}</select><button>Lọc</button></form>
-@foreach(var f in Model){<article class="card"><h2>@f.CustomerName <span class="badge">@f.Status</span></h2><p>@(f.ProductName ?? "Dịch vụ của quán") · @f.Rating/5 · @f.CreatedAtUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm")</p><p>@f.Content</p>
-@foreach(var r in f.Replies){<p><strong>@r.Author</strong>: @r.Content</p>}
-@if(f.Status != FeedbackStatus.Closed){<form action="/Crm/Reply" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@f.Id"><input type="hidden" name="concurrencyToken" value="@f.ConcurrencyToken"><label>Trả lời khách hàng</label><textarea name="content" required maxlength="2000"></textarea><label>Trạng thái sau xử lý</label><select name="status"><option value="InProgress">Đang xử lý</option><option value="Resolved">Đã giải quyết</option><option value="Closed">Đóng phản hồi</option></select><button>Gửi trả lời</button></form>}
-</article>}
-@if(Model.Length == 0){<p class="empty">Chưa có phản hồi phù hợp.</p>}
+@{
+    ViewData["Title"] = "Phản hồi khách hàng";
+    var selectedStatus = Context.Request.Query["status"].ToString();
+    var search = Context.Request.Query["search"].ToString();
+    var totals = (int[])ViewBag.FeedbackTotals;
+    var replyId = TempData["ReplyId"] as string;
+    var replyContent = TempData["ReplyContent"] as string;
+}
+<div class="page-heading"><div><span class="eyebrow">LẮNG NGHE ĐỂ TỐT HƠN</span><h1>Phản hồi khách hàng</h1><p class="subtitle">Tiếp nhận góp ý, giải quyết vấn đề và trả lời ngay tại đây.</p></div></div>
+<div class="grid metric"><div class="card stat-card"><span class="stat-label">Tất cả phản hồi</span><strong>@totals[0]</strong><small>Trải nghiệm được khách chia sẻ</small></div><div class="card stat-card"><span class="stat-label">Cần xử lý</span><strong>@totals[1]</strong><small>Chờ tiếp nhận hoặc đang xử lý</small></div><div class="card stat-card"><span class="stat-label">Đã giải quyết / đóng</span><strong>@totals[2]</strong><small>Những góp ý đã được chăm sóc</small></div></div>
+<form method="get" action="/Crm/Feedback" class="card toolbar"><div class="search-field"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#search" /></svg><input name="search" value="@search" placeholder="Tên khách hoặc nội dung góp ý..." aria-label="Tìm phản hồi"></div><select name="status" aria-label="Lọc trạng thái phản hồi"><option value="">Tất cả trạng thái</option>@foreach (var s in Enum.GetValues<FeedbackStatus>()) { <option value="@s" selected="@(selectedStatus == s.ToString())">@CrmLabels.Feedback(s)</option> }</select><button type="submit">Lọc phản hồi</button><a class="button ghost" href="/Crm/Feedback">Đặt lại</a></form>
+<div class="feedback-list">
+@foreach (var f in Model)
+{
+    <article class="card feedback-item" id="feedback-@f.Id"><div class="item-heading"><div class="user-cell"><span class="avatar" aria-hidden="true">@(f.CustomerName.Length > 0 ? f.CustomerName[..1].ToUpperInvariant() : "K")</span><div><h2>@f.CustomerName</h2><small>@(f.ProductName ?? "Dịch vụ của quán") · @f.CreatedAtUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm")</small></div></div><span class="badge status-@f.Status.ToString().ToLowerInvariant()">@CrmLabels.Feedback(f.Status)</span></div><p class="rating-display"><span aria-hidden="true">★</span> @f.Rating / 5 <span class="muted">điểm trải nghiệm</span></p>
+        <partial name="_FeedbackThread" model="f" />
+        @* Tiếp nhận phản hồi thuộc công việc hằng ngày của Staff; Manager cũng có quyền xử lý. *@
+        @if (f.Status != FeedbackStatus.Closed)
+        {
+            <details class="reply-panel" open="@(f.Replies.Length == 0 || replyId == f.Id.ToString())"><summary>@(f.Replies.Length == 0 ? "Tiếp nhận và trả lời" : "Thêm câu trả lời")</summary><form action="/Crm/Reply" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@f.Id"><input type="hidden" name="concurrencyToken" value="@f.ConcurrencyToken"><label for="reply-@f.Id">Nội dung trả lời</label><textarea id="reply-@f.Id" name="content" placeholder="Cảm ơn khách hàng và ghi nhận hướng xử lý..." required maxlength="2000">@(replyId == f.Id.ToString() ? replyContent : "")</textarea><div class="reply-actions"><div><label for="reply-status-@f.Id">Trạng thái sau xử lý</label><select id="reply-status-@f.Id" name="status"><option value="InProgress" selected="@(f.Status is FeedbackStatus.New or FeedbackStatus.InProgress)">Đang xử lý</option><option value="Resolved" selected="@(f.Status == FeedbackStatus.Resolved)">Đã giải quyết</option><option value="Closed">Đóng phản hồi</option></select></div><button type="submit"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#message" /></svg>Gửi câu trả lời</button></div></form></details>
+        }
+        else { <p class="form-hint">Phản hồi đã đóng, lịch sử trao đổi được lưu lại.</p> }
+    </article>
+}
+</div>
+@if (Model.Length == 0) { <div class="card empty"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#message" /></svg><h3>Chưa có phản hồi phù hợp</h3><p>Các góp ý của khách hàng sẽ xuất hiện tại đây.</p><a href="/Crm/Feedback">Xem tất cả phản hồi</a></div> }

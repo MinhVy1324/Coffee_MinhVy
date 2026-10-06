@@ -21,7 +21,7 @@ public sealed class AuthApiController(UserManager<AppUser> users, SignInManager<
     [HttpPost("login"), AllowAnonymous]
     public async Task<IActionResult> Login(LoginRequest request)
     {
-        var user = await users.FindByEmailAsync(request.Email);
+        var user = await users.FindByEmailAsync(request.Email.Trim());
         if (user == null || user.IsDisabled || !(await signIn.CheckPasswordSignInAsync(user, request.Password, true)).Succeeded)
             return Unauthorized(new { title = "Email, mật khẩu không đúng hoặc tài khoản bị khóa." });
         signIn.AuthenticationScheme = IdentityConstants.BearerScheme;
@@ -45,6 +45,7 @@ public sealed class AuthApiController(UserManager<AppUser> users, SignInManager<
 public sealed class CustomerApiController(CustomerService customers, FeedbackService feedback,
     SurveyService surveys, CrmDbContext db) : ControllerBase
 {
+    // Cùng nguyên tắc với PortalController: token quyết định hồ sơ, không cho client chọn khách khác.
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
     [HttpGet("profile")] public Task<ProfileDto> Profile() => customers.Profile(UserId);
     [HttpPut("profile")] public async Task<IActionResult> Update(ProfileUpdate request)
@@ -56,8 +57,11 @@ public sealed class CustomerApiController(CustomerService customers, FeedbackSer
     [HttpPost("feedback")] public async Task<IActionResult> CreateFeedback(FeedbackCreate request) => Ok(new { id = await feedback.Create((await customers.ByUser(UserId)).Id, request) });
     [HttpGet("surveys")] public async Task<InvitationDto[]> Inbox() => await surveys.Inbox((await customers.ByUser(UserId)).Id);
     [HttpGet("surveys/{id:guid}")] public async Task<SurveyDto> Survey(Guid id) => await surveys.ForCustomer(id,(await customers.ByUser(UserId)).Id);
+    [HttpGet("surveys/{id:guid}/response")] public async Task<SurveyResponseDto?> SurveyResponse(Guid id) => await surveys.ResponseForCustomer(id,(await customers.ByUser(UserId)).Id);
     [HttpPost("surveys/{id:guid}/responses")] public async Task<IActionResult> Submit(Guid id, SubmitResponse request) => Ok(new { id = await surveys.Submit(id,(await customers.ByUser(UserId)).Id,request) });
 }
+// API dùng chung quy tắc với web: Staff và Manager tác nghiệp; khóa/xóa/báo cáo/khảo sát chỉ Manager.
+// Bearer token dành cho client/app. Cookie đăng nhập web không tự cấp quyền gọi các API này.
 [ApiController, Route("api/crm"), Authorize(AuthenticationSchemes = "Identity.Bearer", Roles = Roles.Manager + "," + Roles.Staff)]
 public sealed class CrmApiController(CustomerService customers, FeedbackService feedback,
     SurveyService surveys, ReportService reports) : ControllerBase

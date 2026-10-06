@@ -1,5 +1,17 @@
 @model ReportDto
-<h1>Báo cáo khách hàng</h1><p class="subtitle">Cơ cấu khách hoạt động tại thời điểm xem báo cáo; phản hồi và khảo sát tính trên toàn bộ lịch sử.</p>
-<div class="grid metric"><div class="card">Khách hoạt động<strong>@Model.ActiveCustomers</strong></div><div class="card">Tài khoản khóa<strong>@Model.DisabledCustomers</strong></div><div class="card">Hài lòng trung bình<strong>@(Model.AverageFeedbackRating?.ToString("0.00") ?? "Chưa có")</strong></div></div>
-<div class="card"><h2>Cơ cấu độ tuổi</h2><table><tr><th>Nhóm tuổi</th><th>Số khách</th><th>Tỷ lệ</th></tr>@foreach(var g in Model.AgeGroups){<tr><td>@g.Group</td><td>@g.Count</td><td>@g.Percentage%</td></tr>}</table></div>
-<div class="card"><h2>Sở thích</h2><table><tr><th>Sở thích</th><th>Số khách</th></tr>@foreach(var p in Model.Preferences){<tr><td>@p.Name</td><td>@p.Count</td></tr>}</table><p class="muted">Một khách có thể chọn nhiều sở thích nên tổng số lượt có thể lớn hơn số khách.</p></div>
+@{ ViewData["Title"] = "Báo cáo khách hàng"; }
+@* Chỉ Manager được mở trang này. Tỷ lệ tuổi/sở thích dùng số khách hoạt động làm mẫu số. *@
+<div class="page-heading"><div><span class="eyebrow">THẤU HIỂU ĐỂ CHĂM SÓC</span><h1>Báo cáo khách hàng</h1><p class="subtitle">Cơ cấu khách đang hoạt động tại thời điểm xem báo cáo.</p></div><a class="button ghost" href="/Crm/Customers">Xem khách hàng</a></div>
+<div class="grid metric"><div class="card stat-card"><span class="stat-label">Khách hoạt động</span><strong>@Model.ActiveCustomers</strong><small>Mẫu số của cơ cấu tuổi và sở thích</small></div><div class="card stat-card"><span class="stat-label">Tài khoản đã khóa</span><strong>@Model.DisabledCustomers</strong><small>Không tính vào cơ cấu khách hoạt động</small></div><div class="card stat-card"><span class="stat-label">Hài lòng trung bình</span><strong>@(Model.AverageFeedbackRating?.ToString("0.00") ?? "—") <small>/ 5</small></strong><small>@Model.FeedbackCount đánh giá trong toàn bộ lịch sử</small></div></div>
+<div class="report-grid">
+    <section class="card chart-card"><div class="item-heading"><h2>Cơ cấu độ tuổi</h2><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#users" /></svg></div><p class="section-description">Tuổi tính theo ngày Việt Nam và sinh nhật thực tế.</p>
+        @foreach (var g in Model.AgeGroups) { <div class="chart-row"><div class="chart-label"><strong>@g.Group</strong><span>@g.Count khách <b>@g.Percentage.ToString("0.##")%</b></span></div><div class="bar chart-bar" role="img" aria-label="@g.Group: @g.Count khách, @g.Percentage phần trăm"><span style="width:@g.Percentage.ToString(System.Globalization.CultureInfo.InvariantCulture)%"></span></div></div> }
+        <p class="form-hint">Nhóm chưa cung cấp ngày sinh được thống kê riêng.</p>
+    </section>
+    <section class="card chart-card"><div class="item-heading"><h2>Sở thích của khách</h2><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#leaf" /></svg></div><p class="section-description">Tỷ lệ khách hoạt động lựa chọn từng sở thích.</p>
+        @foreach (var p in Model.Preferences.OrderByDescending(x => x.Count)) { var percent = Model.ActiveCustomers == 0 ? 0 : Math.Round(100m * p.Count / Model.ActiveCustomers,2); <div class="chart-row"><div class="chart-label"><strong>@p.Name</strong><span>@p.Count khách <b>@percent.ToString("0.##")%</b></span></div><div class="bar chart-bar preference-bar" role="img" aria-label="@p.Name: @p.Count khách, @percent phần trăm"><span style="width:@percent.ToString(System.Globalization.CultureInfo.InvariantCulture)%"></span></div></div> }
+        <p class="form-hint">Một khách có thể chọn nhiều sở thích, nên tổng các tỷ lệ có thể vượt 100%.</p>
+    </section>
+</div>
+@if (Model.ActiveCustomers == 0) { <div class="notice">Chưa có khách hoạt động. Thêm khách hàng và bổ sung hồ sơ để bắt đầu theo dõi cơ cấu.</div> }
+<div class="card report-note"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#chart" /></svg><div><strong>Hoạt động khảo sát trong toàn bộ lịch sử</strong><p>@Model.Responded câu trả lời / @Model.Invited lời mời. Phản hồi và khảo sát giữ lịch sử kể cả khi hồ sơ khách đã được lưu trữ.</p><a href="/Crm/Surveys">Xem kết quả từng khảo sát →</a></div></div>

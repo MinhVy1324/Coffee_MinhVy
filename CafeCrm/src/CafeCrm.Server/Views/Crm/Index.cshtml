@@ -1,6 +1,31 @@
 @model ReportDto
-<h1>Tổng quan khách hàng</h1><p class="subtitle">Theo dõi chất lượng chăm sóc và mức độ tham gia khảo sát.</p>
-@if(Model != null) {
-<div class="grid metric"><div class="card">Khách hàng hoạt động<strong>@Model.ActiveCustomers</strong></div><div class="card">Phản hồi đã nhận<strong>@Model.FeedbackCount</strong></div><div class="card">Hài lòng trung bình<strong>@(Model.AverageFeedbackRating?.ToString("0.00") ?? "—") <small>/ 5</small></strong></div></div>
-<div class="card"><h2>Tham gia khảo sát</h2><p>@Model.Responded câu trả lời trên @Model.Invited lời mời.</p><a class="button" href="/Crm/Surveys">Quản lý khảo sát</a></div>
-} else { <div class="card"><h2>Công việc tại quầy</h2><a class="button" href="/Crm/Customers">Tra cứu khách hàng</a> <a class="button ghost" href="/Crm/Feedback">Xử lý phản hồi</a></div> }
+@{ ViewData["Title"] = "Tổng quan khách hàng"; }
+<div class="welcome-banner"><div><span class="eyebrow">KHÔNG GIAN CHĂM SÓC KHÁCH HÀNG</span><h1>Mỗi ngày, thêm một kết nối.</h1><p>Theo dõi phản hồi, thấu hiểu khách hàng và tạo nên những trải nghiệm tốt hơn.</p></div><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#cup" /></svg></div>
+@if (Model != null)
+{
+    var rate = Model.Invited > 0 ? Math.Clamp(Model.Responded * 100m / Model.Invited, 0, 100) : 0;
+    <div class="grid metric">
+        <div class="card stat-card"><span class="stat-label">Khách hàng hoạt động</span><span class="stat-icon"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#users" /></svg></span><strong>@Model.ActiveCustomers</strong><small>Khách hàng đang kết nối với quán</small></div>
+        <div class="card stat-card"><span class="stat-label">Phản hồi đã nhận</span><span class="stat-icon blue"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#message" /></svg></span><strong>@Model.FeedbackCount</strong><small>Lắng nghe từng trải nghiệm</small></div>
+        <div class="card stat-card"><span class="stat-label">Hài lòng trung bình</span><span class="stat-icon amber"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#leaf" /></svg></span><strong>@(Model.AverageFeedbackRating?.ToString("0.00") ?? "—") <small>/ 5</small></strong><small>@(Model.AverageFeedbackRating.HasValue ? "Tính từ phản hồi của khách hàng" : "Chưa có đánh giá từ khách hàng")</small></div>
+    </div>
+    <div class="dashboard-grid">
+        <section class="card"><h2>Lắng nghe qua khảo sát</h2><p class="section-description">Mỗi câu trả lời giúp quán hiểu khách hàng hơn.</p>
+            <div class="survey-progress"><div class="progress-label"><span>Tỷ lệ tham gia</span><strong>@rate.ToString("0.#")%</strong></div><div class="bar" role="progressbar" aria-label="Tỷ lệ tham gia khảo sát" aria-valuenow="@rate.ToString(System.Globalization.CultureInfo.InvariantCulture)" aria-valuemin="0" aria-valuemax="100"><span style="width:@rate.ToString(System.Globalization.CultureInfo.InvariantCulture)%"></span></div><div class="progress-label"><span>@Model.Responded câu trả lời</span><span>@Model.Invited lời mời</span></div></div>
+            @if (Model.Invited == 0) { <p class="form-hint">Tạo và phát hành khảo sát đầu tiên để bắt đầu nhận ý kiến.</p> }
+            <a class="button ghost" href="/Crm/Surveys">Quản lý khảo sát<svg class="icon" aria-hidden="true"><use href="/img/icons.svg#arrow-right" /></svg></a>
+        </section>
+        <section class="card"><h2>Bắt đầu công việc</h2><p class="section-description">Những việc cần làm, ngay trong tầm tay.</p>
+            <a class="quick-link" href="/Crm/Customers"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#users" /></svg><span><strong>Hồ sơ khách hàng</strong><small>Tra cứu thông tin và cập nhật sở thích</small></span><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#arrow-right" /></svg></a>
+            <a class="quick-link" href="/Crm/Feedback"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#message" /></svg><span><strong>Chăm sóc phản hồi</strong><small>Lắng nghe và trả lời góp ý của khách</small></span><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#arrow-right" /></svg></a>
+            <a class="quick-link" href="/Crm/Reports"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#chart" /></svg><span><strong>Báo cáo khách hàng</strong><small>Theo dõi độ tuổi, sở thích và mức hài lòng</small></span><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#arrow-right" /></svg></a>
+        </section>
+    </div>
+}
+else
+{
+    <section class="card stack"><h2>Sẵn sàng cho một ngày mới</h2><p class="section-description">Tra cứu khách hàng và phản hồi những góp ý tại quầy.</p>
+        <a class="quick-link" href="/Crm/Customers"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#users" /></svg><span><strong>Tra cứu khách hàng</strong><small>Xem và cập nhật hồ sơ khách hàng</small></span><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#arrow-right" /></svg></a>
+        <a class="quick-link" href="/Crm/Feedback"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#message" /></svg><span><strong>Xử lý phản hồi</strong><small>Tiếp nhận và trả lời ý kiến của khách</small></span><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#arrow-right" /></svg></a>
+    </section>
+}

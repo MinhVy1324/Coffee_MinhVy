@@ -1,4 +1,13 @@
 @model InvitationDto[]
-<h1>Khảo sát nhận được</h1><p class="subtitle">Góp ý của ông giúp quán chọn món mới và cải thiện dịch vụ.</p>
-@foreach(var s in Model){<div class="card"><h2>@s.Title</h2><p>Hạn trả lời: @s.ClosesAtUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm")</p>@if(s.HasResponded){<span class="badge">Đã trả lời</span>}else{<a class="button" href="/Portal/Survey/@s.SurveyId">Mở khảo sát</a>}</div>}
-@if(Model.Length==0){<p class="empty">Chưa có khảo sát được gửi đến tài khoản.</p>}
+@{ ViewData["Title"] = "Khảo sát của tôi"; var counts = (int[])ViewBag.SurveyCounts; var status = (string?)ViewBag.SurveyStatus; }
+<div class="page-heading"><div><span class="eyebrow">GÓP Ý HÔM NAY, TRẢI NGHIỆM TỐT HƠN NGÀY MAI</span><h1>Khảo sát của tôi</h1><p class="subtitle">Những lời mời dành riêng cho bạn. Mỗi câu trả lời đều có giá trị.</p></div></div>
+<nav class="portal-tabs" aria-label="Lọc lời mời khảo sát"><a class="@(string.IsNullOrEmpty(status) ? "active" : "")" href="/Portal/Surveys">Tất cả <span>@counts[0]</span></a><a class="@(status == "pending" ? "active" : "")" href="/Portal/Surveys?status=pending">Chờ trả lời <span>@counts[1]</span></a><a class="@(status == "answered" ? "active" : "")" href="/Portal/Surveys?status=answered">Đã trả lời <span>@counts[2]</span></a><a class="@(status == "closed" ? "active" : "")" href="/Portal/Surveys?status=closed">Đóng / hết hạn <span>@counts[3]</span></a></nav>
+@foreach (var s in Model)
+{
+    var available = PortalLabels.Available(s);
+    <article class="card survey-item"><div class="item-heading"><div><span class="eyebrow">LỜI MỜI TỪ QUÁN</span><h2>@s.Title</h2></div><span class="badge @(available ? "status-new" : s.HasResponded ? "" : "badge-disabled")">@(s.HasResponded ? "Đã trả lời" : s.IsClosed ? "Đã đóng" : s.ClosesAtUtc <= DateTime.UtcNow ? "Hết hạn" : "Chờ bạn trả lời")</span></div><p class="survey-deadline"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#calendar" /></svg>Hạn trả lời: @s.ClosesAtUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm")</p>
+        @if (available) { <a class="button" href="/Portal/Survey/@s.SurveyId">Mở khảo sát<svg class="icon" aria-hidden="true"><use href="/img/icons.svg#arrow-right" /></svg></a> }
+        else if (s.HasResponded) { <a class="button ghost" href="/Portal/Survey/@s.SurveyId">Xem câu trả lời đã gửi<svg class="icon" aria-hidden="true"><use href="/img/icons.svg#arrow-right" /></svg></a> }
+    </article>
+}
+@if (Model.Length == 0) { <div class="card empty"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#clipboard" /></svg><h3>@(counts[0] == 0 ? "Chưa có lời mời khảo sát" : "Không có khảo sát ở nhóm này")</h3><p>@(counts[0] == 0 ? "Khảo sát mới sẽ xuất hiện tại đây khi quán gửi đến tài khoản của bạn." : "Chọn nhóm khác để xem những lời mời còn lại.")</p></div> }

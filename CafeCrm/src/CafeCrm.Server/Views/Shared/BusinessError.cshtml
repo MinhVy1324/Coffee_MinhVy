@@ -1,0 +1,3 @@
+@model BusinessErrorViewModel
+@{ ViewData["Title"] = "Không thể thực hiện yêu cầu"; }
+<section class="card empty business-error"><span class="eyebrow">YÊU CẦU CHƯA ĐƯỢC THỰC HIỆN · @Model.Status</span><h1>Vui lòng kiểm tra lại yêu cầu</h1><p class="text-content">@Model.Message</p><a class="button" href="/">Về trang chính<svg class="icon" aria-hidden="true"><use href="/img/icons.svg#arrow-right" /></svg></a></section>

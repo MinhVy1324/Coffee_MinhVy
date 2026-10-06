@@ -1,8 +1,16 @@
 @model ProfileDto
-<h1>Hồ sơ khách hàng</h1><p class="subtitle">Thông tin liên hệ và sở thích phục vụ chăm sóc khách hàng.</p>
-<form method="post" action="@(User.IsInRole(Roles.Customer) ? "/Portal/Update" : "/Crm/EditCustomer/" + Model.Id)" class="card stack">@Html.AntiForgeryToken()
-<input type="hidden" name="ConcurrencyToken" value="@Model.ConcurrencyToken"><label>Email</label><input value="@Model.Email" readonly>
-<label>Họ tên</label><input name="FullName" value="@Model.FullName" required maxlength="100"><label>Số điện thoại</label><input name="Phone" value="@Model.Phone" maxlength="10">
-<label>Ngày sinh</label><input name="BirthDate" type="date" value="@Model.BirthDate?.ToString("yyyy-MM-dd")"><label>Địa chỉ</label><input name="Address" value="@Model.Address" maxlength="250">
-<label>Sở thích</label>@foreach(var p in (List<Preference>)ViewBag.Preferences) { <label class="check"><input name="PreferenceIds" type="checkbox" value="@p.Id" checked="@Model.PreferenceIds.Contains(p.Id)">@p.Name</label> }
-<button>Lưu thay đổi</button></form>
+@{ var ownProfile = User.IsInRole(Roles.Customer); ViewData["Title"] = ownProfile ? "Hồ sơ của tôi" : "Hồ sơ khách hàng"; }
+<div class="page-heading"><div><span class="eyebrow">HIỂU NHAU TỪ NHỮNG ĐIỀU NHỎ</span><h1>@ViewData["Title"]</h1><p class="subtitle">Thông tin và sở thích giúp quán chăm sóc bạn tốt hơn.</p></div>@if (!ownProfile) { <a class="button ghost" href="/Crm/Customers">Về danh sách</a> }</div>
+<form method="post" action="@(ownProfile ? "/Portal/Update" : "/Crm/EditCustomer/" + Model.Id)" class="content-split profile-form">
+    @Html.AntiForgeryToken()<input type="hidden" name="ConcurrencyToken" value="@Model.ConcurrencyToken">
+    <section class="card form-card"><div asp-validation-summary="All" class="validation-summary" role="alert"></div><h2>Thông tin cá nhân</h2><p class="section-description">Ngày sinh, số điện thoại và địa chỉ có thể bổ sung sau.</p><div class="form-grid">
+        <div><label for="profile-name">Họ và tên</label><input id="profile-name" name="FullName" value="@Model.FullName" autocomplete="name" required maxlength="100"></div>
+        <div><label for="profile-email">Địa chỉ email</label><input id="profile-email" value="@Model.Email" readonly></div>
+        <div><label for="profile-phone">Số điện thoại</label><input id="profile-phone" name="Phone" value="@Model.Phone" type="tel" autocomplete="tel" maxlength="10" pattern="0[0-9]{9}" placeholder="0901234567"><p class="form-hint">10 chữ số, bắt đầu bằng 0.</p></div>
+        <div><label for="profile-birth">Ngày sinh</label><input id="profile-birth" name="BirthDate" type="date" value="@Model.BirthDate?.ToString("yyyy-MM-dd")" max="@DateTime.UtcNow.AddHours(7).ToString("yyyy-MM-dd")"></div>
+        <div class="full-width"><label for="profile-address">Địa chỉ</label><input id="profile-address" name="Address" value="@Model.Address" autocomplete="street-address" maxlength="250" placeholder="Địa chỉ liên hệ"></div>
+    </div><div class="form-actions"><button type="submit"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#check-circle" /></svg>Lưu thay đổi</button><a class="button ghost" href="@(ownProfile ? "/Portal/Profile" : "/Crm/EditCustomer/" + Model.Id)">Tải lại hồ sơ</a></div>@if (ownProfile) { <p class="form-hint">Email là định danh đăng nhập và không thay đổi tại đây. <a href="/Portal/ChangePassword">Đổi mật khẩu</a> để bảo vệ tài khoản.</p> }</section>
+    <section class="card preferences-card"><span class="section-icon"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#leaf" /></svg></span><h2>Một chút về sở thích</h2><p class="section-description">Có thể chọn nhiều sở thích. Những điều nhỏ giúp mỗi lần ghé quán thêm phù hợp.</p><div class="preference-options">
+        @foreach (var p in (List<Preference>)ViewBag.Preferences) { <label class="choice-tile"><input name="PreferenceIds" type="checkbox" value="@p.Id" checked="@Model.PreferenceIds.Contains(p.Id)"><span>@p.Name</span></label> }
+    </div></section>
+</form>

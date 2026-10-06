@@ -1,8 +1,43 @@
 @model SurveyDto
-<h1>@Model.Title</h1><p class="subtitle">@Model.Description</p>
-<form method="post" class="card stack">@Html.AntiForgeryToken()
-@foreach(var q in Model.Questions){<div class="question"><h2>@q.Text @(q.IsRequired ? "*" : "")</h2>
-@if(q.Kind == QuestionKind.Text){<textarea name="q_@q.Id" maxlength="2000" required="@q.IsRequired"></textarea>}
-else if(q.Kind == QuestionKind.Rating){<select name="q_@q.Id" required="@q.IsRequired"><option value="">Chọn điểm</option>@for(var i=1;i<=5;i++){<option value="@i">@i / 5</option>}</select>}
-else{foreach(var o in q.Options){<label class="check"><input type="@(q.Kind == QuestionKind.SingleChoice ? "radio" : "checkbox")" name="q_@q.Id" value="@o.Id">@o.Text</label>}}
-</div>}<button>Gửi câu trả lời</button></form>
+@{
+    ViewData["Title"] = Model.Title;
+    var hasResponded = (bool?)ViewBag.HasResponded ?? false;
+    var available = !hasResponded && Model.Status == SurveyStatus.Published && Model.ClosesAtUtc > DateTime.UtcNow;
+    var submitted = Context.Request.HasFormContentType ? Context.Request.Form : null;
+    var number = 0;
+}
+<div class="page-heading"><div><span class="eyebrow">CHIA SẺ ĐỂ CÙNG TỐT HƠN</span><h1>@Model.Title</h1><p class="subtitle text-content">@Model.Description</p></div><a class="button ghost" href="/Portal/Surveys">Về lời mời</a></div>
+@if (!available) {
+    <div class="notice">@(hasResponded ? "Bạn đã trả lời khảo sát này. Cảm ơn bạn!" : "Khảo sát đã đóng hoặc hết hạn nhận câu trả lời.")</div>
+    @if (ViewBag.Response is SurveyResponseDto response) {
+        <h2>Câu trả lời bạn đã gửi</h2><p class="form-hint">Gửi lúc @response.SubmittedAtUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm"). Câu trả lời được lưu và không thể sửa.</p>
+        @foreach (var q in Model.Questions) {
+            var answer = response.Answers.SingleOrDefault(a => a.QuestionId == q.Id);
+            <section class="card saved-answer"><h3>@(++number). @q.Text</h3>
+                @if (answer == null) { <p class="form-hint">Bạn đã bỏ qua câu không bắt buộc này.</p> }
+                else if (q.Kind == QuestionKind.Text) { <p class="text-content">@answer.Text</p> }
+                else if (q.Kind == QuestionKind.Rating) { <p><strong>@answer.Rating / 5</strong> điểm</p> }
+                else { <ul>@foreach (var option in q.Options.Where(o => answer.OptionIds.Contains(o.Id))) { <li>@option.Text</li> }</ul> }
+            </section>
+        }
+    }
+}
+else
+{
+    <p class="survey-deadline"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#calendar" /></svg>Hạn trả lời: @Model.ClosesAtUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm") · Mỗi khách trả lời một lần.</p>
+    @* HTML/JavaScript hướng dẫn nhập; service kiểm tra lại toàn bộ trước khi ghi database. *@
+    <form method="post" action="/Portal/Survey/@Model.Id" class="survey-response-form" id="survey-response" data-prevent-double-submit>@Html.AntiForgeryToken()<div asp-validation-summary="All" class="validation-summary" role="alert"></div>
+    @foreach (var q in Model.Questions)
+    {
+        number++;
+        var name = $"q_{q.Id}";
+        var values = submitted?[name].ToArray() ?? [];
+        <fieldset class="card response-question" data-min-selection="@(q.Kind == QuestionKind.MultipleChoice && q.IsRequired ? "1" : "0")"><legend><span class="question-number">@number</span>@q.Text @if (q.IsRequired) { <span class="required-mark" aria-label="Bắt buộc">*</span> }</legend><p class="form-hint">@CrmLabels.Question(q.Kind) · @(q.IsRequired ? "Bắt buộc" : "Không bắt buộc")</p>
+            @if (q.Kind == QuestionKind.Text) { <label for="@name" class="sr-only">@q.Text</label><textarea id="@name" name="@name" maxlength="2000" required="@q.IsRequired" placeholder="Chia sẻ ý kiến của bạn...">@values.FirstOrDefault()</textarea> }
+            else if (q.Kind == QuestionKind.Rating) { <label for="@name" class="sr-only">@q.Text</label><select id="@name" name="@name" required="@q.IsRequired"><option value="">Chọn điểm đánh giá</option>@for (var i = 1; i <= 5; i++) { <option value="@i" selected="@values.Contains(i.ToString())">@i / 5</option> }</select> }
+            else { <div class="response-options">@foreach (var o in q.Options) { <label class="choice-tile"><input type="@(q.Kind == QuestionKind.SingleChoice ? "radio" : "checkbox")" name="@name" value="@o.Id" checked="@values.Contains(o.Id.ToString())" required="@(q.Kind == QuestionKind.SingleChoice && q.IsRequired)"><span>@o.Text</span></label> }</div> }
+        </fieldset>
+    }
+    <div class="form-actions"><button type="submit"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#check-circle" /></svg>Gửi câu trả lời</button><span class="form-hint">Kiểm tra câu trả lời trước khi gửi. Bạn không thể gửi lần thứ hai.</span></div></form>
+}
+@section Scripts { <script src="~/js/survey-response.js" asp-append-version="true" defer></script> }

@@ -25,6 +25,8 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : Ident
     protected override void OnModelCreating(ModelBuilder b)
     {
         base.OnModelCreating(b);
+        // Unique index và FK là lớp kiểm tra cuối tại database, kể cả request đến cùng lúc.
+        // Một tài khoản chỉ có một hồ sơ; một điện thoại chỉ thuộc một hồ sơ chưa lưu trữ.
         b.Entity<Customer>().HasIndex(x => x.UserId).IsUnique();
         b.Entity<Customer>().HasIndex(x => x.Phone).IsUnique().HasFilter("[Phone] IS NOT NULL AND [IsDeleted] = 0");
         b.Entity<Customer>().Property(x => x.Phone).HasMaxLength(10);
@@ -44,6 +46,7 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : Ident
         b.Entity<SurveyQuestion>().HasIndex(x => new { x.SurveyId, x.Position }).IsUnique();
         b.Entity<SurveyOption>().HasAlternateKey(x => new { x.Id, x.QuestionId });
         b.Entity<SurveyInvitation>().HasIndex(x => new { x.SurveyId, x.CustomerId }).IsUnique();
+        // Không mời trùng một khách trong một khảo sát và không trả lời trùng một lời mời.
         b.Entity<SurveyInvitation>().HasAlternateKey(x => new { x.Id, x.SurveyId });
         b.Entity<SurveyResponse>().HasIndex(x => x.InvitationId).IsUnique();
         b.Entity<SurveyResponse>().HasAlternateKey(x => new { x.Id, x.SurveyId });
@@ -61,7 +64,8 @@ public sealed class CrmDbContext(DbContextOptions<CrmDbContext> options) : Ident
             .HasForeignKey(x => new { x.AnswerId, x.QuestionId }).HasPrincipalKey(x => new { x.Id, x.QuestionId });
         b.Entity<SurveyAnswerOption>().HasOne(x => x.Option).WithMany()
             .HasForeignKey(x => new { x.OptionId, x.QuestionId }).HasPrincipalKey(x => new { x.Id, x.QuestionId });
-        // Historical CRM records are retained. Explicit cleanup only; no multi-path cascades on SQL Server.
+        // FK ghép Id + SurveyId/QuestionId ngăn đáp án thuộc khảo sát hoặc câu hỏi khác.
+        // Giữ lịch sử CRM: Restrict chặn xóa dây chuyền; nghiệp vụ khách dùng xóa mềm.
         foreach (var entity in b.Model.GetEntityTypes().Where(x => !x.GetTableName()!.StartsWith("AspNet")))
             foreach (var fk in entity.GetForeignKeys()) fk.DeleteBehavior = DeleteBehavior.Restrict;
     }

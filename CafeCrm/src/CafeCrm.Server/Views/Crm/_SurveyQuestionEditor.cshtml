@@ -1,0 +1,9 @@
+@model QuestionEditor
+@{ var i = (int)(ViewData["QuestionIndex"] ?? 0); }
+<section class="question-editor" data-question>
+    <div class="item-heading"><h3 data-question-title>Câu @(i + 1)</h3><button type="button" class="icon-button remove-question" aria-label="Xóa câu hỏi này" hidden><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#close" /></svg></button></div>
+    <label for="@($"question-{i}-text")">Nội dung câu hỏi</label><input id="@($"question-{i}-text")" name="Questions[@i].Text" data-field="Text" value="@Model.Text" placeholder="Bạn hài lòng với điều gì tại quán?" required maxlength="500">
+    <div class="question-controls"><div><label for="@($"question-{i}-kind")">Loại câu hỏi</label><select id="@($"question-{i}-kind")" name="Questions[@i].Kind" data-field="Kind">@foreach (var kind in Enum.GetValues<QuestionKind>()) { <option value="@kind" selected="@(kind == Model.Kind)">@CrmLabels.Question(kind)</option> }</select></div><label class="check"><input type="checkbox" name="Questions[@i].IsRequired" data-field="IsRequired" value="true" checked="@Model.IsRequired">Bắt buộc trả lời</label><input type="hidden" name="Questions[@i].IsRequired" data-field="IsRequired" value="false"></div>
+    <div data-choice-options><label for="@($"question-{i}-options")">Các lựa chọn</label><textarea id="@($"question-{i}-options")" name="Questions[@i].Options" data-field="Options" placeholder="Mỗi dòng một đáp án">@Model.Options</textarea><p class="form-hint">Từ 2 đến 10 đáp án, mỗi dòng một đáp án. Không nhập trùng lựa chọn.</p></div>
+    <p class="form-hint" data-kind-hint></p>
+</section>

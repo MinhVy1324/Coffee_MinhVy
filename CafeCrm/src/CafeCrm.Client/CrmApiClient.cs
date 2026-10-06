@@ -6,7 +6,8 @@ using CafeCrm.Contracts;
 
 namespace CafeCrm.Client;
 
-public interface ITokenStore // interface giao diện 
+// Hợp đồng lưu token: client không cần biết bên dưới dùng SecureStorage hay cơ chế lưu trữ nào.
+public interface ITokenStore
 {
     Task<string?> Read();
     Task Write(string value);
@@ -14,10 +15,12 @@ public interface ITokenStore // interface giao diện
 }
 public sealed class ApiException(HttpStatusCode status, string message) : Exception(message)
 { public HttpStatusCode Status { get; } = status; }
-public sealed class CrmApiClient(HttpClient http, ITokenStore store) //contructor 
+// Primary constructor nhận HttpClient và nơi lưu token qua dependency injection.
+public sealed class CrmApiClient(HttpClient http, ITokenStore store)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private readonly SemaphoreSlim refreshLock = new(1,1);//đây là mọt ổ lock cho phep xư li    
+    // Chỉ một request được làm mới token tại một thời điểm, tránh các request đồng thời ghi đè phiên.
+    private readonly SemaphoreSlim refreshLock = new(1,1);
     private TokenResponse? tokens;
     public async Task<bool> RestoreSession() {
         var saved = await store.Read();

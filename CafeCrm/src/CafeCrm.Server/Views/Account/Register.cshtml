@@ -1,5 +1,17 @@
-<h1>Đăng ký khách hàng</h1><p class="subtitle">Nhận khảo sát và gửi góp ý cho quán.</p>
-<form method="post" class="card stack">@Html.AntiForgeryToken()
-<label>Họ tên</label><input name="fullName" maxlength="100" required>
-<label>Email</label><input name="email" type="email" required><label>Mật khẩu</label><input name="password" type="password" minlength="8" required>
-<p class="muted">Ít nhất 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt.</p><button>Đăng ký</button></form>
+@model RegisterInput
+@{ ViewData["Title"] = "Đăng ký khách hàng"; }
+<span class="auth-heading-icon"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#user" /></svg></span>
+<span class="eyebrow">TRỞ THÀNH MỘT PHẦN CỦA QUÁN</span>
+<h1>Bắt đầu một kết nối mới.</h1><p class="subtitle">Tạo tài khoản để gửi góp ý, nhận khảo sát và chia sẻ sở thích của bạn.</p>
+<form method="post" action="/Account/Register">
+    @Html.AntiForgeryToken()
+    @* Razor tự mã hóa họ tên/email khi xuất HTML, ngăn nội dung nhập trở thành script. *@
+    <div asp-validation-summary="All" class="validation-summary" role="alert"></div>
+    <label for="register-name">Họ và tên</label><input id="register-name" name="fullName" value="@Model.FullName" placeholder="Tên của bạn" autocomplete="name" maxlength="100" required>
+    <label for="register-email">Địa chỉ email</label><input id="register-email" name="email" type="email" value="@Model.Email" placeholder="ban@example.com" autocomplete="username" maxlength="256" required>
+    <label for="register-password">Mật khẩu</label><div class="password-field"><input id="register-password" name="password" type="password" placeholder="Tạo mật khẩu" autocomplete="new-password" minlength="8" maxlength="128" aria-describedby="register-password-hint" required><button type="button" class="icon-button" data-password-toggle="register-password" aria-label="Hiện mật khẩu" aria-pressed="false" hidden><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#eye" /></svg></button></div>
+    <p class="form-hint" id="register-password-hint">Ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.</p>
+    <label for="register-confirm">Nhập lại mật khẩu</label><div class="password-field"><input id="register-confirm" name="ConfirmPassword" type="password" autocomplete="new-password" minlength="8" maxlength="128" data-match-password="register-password" required><button type="button" class="icon-button" data-password-toggle="register-confirm" aria-label="Hiện mật khẩu" aria-pressed="false" hidden><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#eye" /></svg></button></div>
+    <button type="submit" class="auth-submit"><span>Tạo tài khoản</span><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#arrow-right" /></svg></button>
+</form>
+<p class="auth-switch">Đã có tài khoản?<a href="/Account/Login">Đăng nhập</a></p>

@@ -1,3 +1,16 @@
 @model Supplier[]
-<h1>Nhà cung cấp</h1><form method="get" class="toolbar"><input name="search" placeholder="Tên, email hoặc số điện thoại"><select name="active"><option value="">Tất cả trạng thái</option><option value="true">Đang hợp tác</option><option value="false">Ngừng hợp tác</option></select><select name="sort"><option value="name">Tên tăng dần</option><option value="name_desc">Tên giảm dần</option></select><button>Tìm và lọc</button><a class="button ghost" href="/Admin/SupplierEditor">Thêm nhà cung cấp</a></form>
-<div class="card"><table><tr><th>Tên</th><th>Liên hệ</th><th>Trạng thái</th><th></th></tr>@foreach(var s in Model){<tr><td>@s.Name</td><td>@s.Phone<small>@s.Email</small></td><td>@(s.IsActive ? "Đang hợp tác" : "Ngừng hợp tác")</td><td><a href="/Admin/SupplierEditor/@s.Id">Sửa</a></td></tr>}</table></div>
+@{ ViewData["Title"] = "Nhà cung cấp"; var query = Context.Request.Query; }
+<div class="page-heading"><div><span class="eyebrow">ĐỐI TÁC CỦA QUÁN</span><h1>Nhà cung cấp</h1><p class="subtitle">Giữ thông tin đối tác và các mối hợp tác luôn trong tầm tay.</p></div><a class="button" href="/Admin/SupplierEditor"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#plus" /></svg>Thêm nhà cung cấp</a></div>
+<form method="get" class="card toolbar" action="/Admin/Suppliers">
+    <div class="search-field"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#search" /></svg><input name="search" value="@query["search"]" placeholder="Tên, email hoặc số điện thoại..." aria-label="Tìm nhà cung cấp"></div>
+    <select name="active" aria-label="Trạng thái hợp tác"><option value="">Tất cả trạng thái</option><option value="true" selected="@(query["active"] == "true")">Đang hợp tác</option><option value="false" selected="@(query["active"] == "false")">Ngừng hợp tác</option></select>
+    <select name="sort" aria-label="Sắp xếp nhà cung cấp"><option value="name" selected="@(query["sort"] == "name")">Tên tăng dần</option><option value="name_desc" selected="@(query["sort"] == "name_desc")">Tên giảm dần</option></select>
+    <button type="submit"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#filter" /></svg>Lọc</button><a class="button ghost" href="/Admin/Suppliers">Đặt lại</a>
+</form>
+<section class="card table-card"><div class="card-heading"><h2>Danh sách đối tác</h2><span class="count-badge">@Model.Length nhà cung cấp</span></div>
+    <div class="table-scroll" tabindex="0" role="region" aria-label="Danh sách nhà cung cấp"><table><thead><tr><th scope="col">Nhà cung cấp</th><th scope="col">Thông tin liên hệ</th><th scope="col">Trạng thái</th><th scope="col">Thao tác</th></tr></thead><tbody>
+    @foreach (var s in Model) { <tr><td><strong>@s.Name</strong></td><td>@(s.Phone ?? "Chưa có số điện thoại")<small>@(s.Email ?? "Chưa có email")</small></td><td><span class="badge @(s.IsActive ? "" : "badge-disabled")">@(s.IsActive ? "Đang hợp tác" : "Ngừng hợp tác")</span></td><td><a class="table-action" href="/Admin/SupplierEditor/@s.Id" aria-label="Sửa nhà cung cấp @s.Name">Chỉnh sửa</a></td></tr> }
+    </tbody></table></div>
+    @if (Model.Length == 0) { <div class="empty"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#truck" /></svg><h3>Chưa có đối tác phù hợp</h3><p>Thử từ khóa khác hoặc thêm nhà cung cấp mới.</p><a href="/Admin/Suppliers">Xóa bộ lọc</a></div> }
+    <div class="table-footer">@Model.Length nhà cung cấp trong danh sách hiện tại</div>
+</section>

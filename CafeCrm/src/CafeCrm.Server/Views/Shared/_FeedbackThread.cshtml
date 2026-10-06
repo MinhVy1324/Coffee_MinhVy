@@ -1,0 +1,7 @@
+@model FeedbackDto
+<div class="feedback-message"><p class="text-content">@Model.Content</p></div>
+@* Razor tự mã hóa nội dung khách nhập để góp ý không bị thực thi như HTML/JavaScript. *@
+@foreach (var reply in Model.Replies)
+{
+    <div class="feedback-reply"><div class="reply-heading"><strong>@(User.IsInRole(Roles.Customer) ? "Quán trả lời" : reply.Author)</strong><time datetime="@reply.CreatedAtUtc.ToString("O")">@reply.CreatedAtUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm")</time></div><p class="text-content">@reply.Content</p></div>
+}

@@ -1,11 +1,34 @@
 @model CustomerRow[]
-<h1>Khách hàng</h1><p class="subtitle">Tra cứu hồ sơ, cập nhật sở thích và quản lý trạng thái tài khoản.</p>
-<form method="get" class="toolbar"><input name="search" placeholder="Tên, email hoặc số điện thoại"><button>Tìm kiếm</button><a class="button ghost" href="/Crm/CreateCustomer">Thêm khách hàng</a><a href="?archived=true">Hồ sơ đã lưu trữ</a></form>
-<div class="card"><table><thead><tr><th>Khách hàng</th><th>Liên hệ</th><th>Ngày sinh</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>
-@foreach(var c in Model) { <tr><td>@c.FullName<small>@c.Email</small></td><td>@(c.Phone ?? "Chưa có")</td><td>@c.BirthDate</td><td><span class="badge">@(c.IsDeleted ? "Đã lưu trữ" : c.IsDisabled ? "Đã khóa" : "Hoạt động")</span></td><td>
-@if(!c.IsDeleted) { <a href="/Crm/EditCustomer/@c.Id">Sửa hồ sơ</a>
-@if(User.IsInRole(Roles.Manager)) {
-<form class="inline" action="/Crm/LockCustomer" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@c.Id"><input type="hidden" name="disabled" value="@(!c.IsDisabled)"><button class="ghost">@(c.IsDisabled ? "Mở khóa" : "Khóa")</button></form>
-<form class="inline" action="/Crm/ArchiveCustomer" method="post" onsubmit="return confirm('Lưu trữ hồ sơ và khóa tài khoản khách hàng?')">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@c.Id"><input type="hidden" name="version" value="@c.ConcurrencyToken"><button class="danger">Xóa</button></form>
-} }</td></tr> }
-</tbody></table>@if(Model.Length == 0){<p class="empty">Không có khách hàng phù hợp.</p>}</div>
+@{
+    ViewData["Title"] = "Khách hàng";
+    var search = Context.Request.Query["search"].ToString();
+    var status = Context.Request.Query["status"].ToString();
+    var archived = Context.Request.Query["archived"].ToString().Equals("true",StringComparison.OrdinalIgnoreCase);
+    var totals = (int[])ViewBag.CustomerTotals;
+}
+<div class="page-heading"><div><span class="eyebrow">NHỮNG KHÁCH HÀNG THÂN QUEN</span><h1>@(archived ? "Hồ sơ đã lưu trữ" : "Khách hàng")</h1><p class="subtitle">Tra cứu thông tin, ghi nhớ sở thích và chăm sóc từng kết nối.</p></div><a class="button" href="/Crm/CreateCustomer"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#plus" /></svg>Thêm khách hàng</a></div>
+<div class="grid metric"><div class="card stat-card"><span class="stat-label">@(archived ? "Hồ sơ lưu trữ" : "Hồ sơ đang quản lý")</span><strong>@totals[0]</strong><small>Trong danh sách @(archived ? "lưu trữ" : "hiện tại")</small></div><div class="card stat-card"><span class="stat-label">Có thể đăng nhập</span><strong>@totals[1]</strong><small>Tài khoản đang hoạt động</small></div><div class="card stat-card"><span class="stat-label">Đã khóa</span><strong>@totals[2]</strong><small>Tạm ngừng quyền truy cập</small></div></div>
+<section class="card table-card"><div class="card-heading"><h2>Danh sách khách hàng</h2><span class="count-badge">@Model.Length hồ sơ</span><a class="text-link" href="@(archived ? "/Crm/Customers" : "/Crm/Customers?archived=true")">@(archived ? "Khách hàng hiện tại" : "Xem hồ sơ lưu trữ")</a></div>
+    <form method="get" class="toolbar filter-toolbar" action="/Crm/Customers" role="search"><input type="hidden" name="archived" value="@archived.ToString().ToLowerInvariant()"><div class="search-field"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#search" /></svg><input name="search" value="@search" placeholder="Tên, email hoặc số điện thoại..." aria-label="Tìm khách hàng"></div><select name="status" aria-label="Trạng thái tài khoản"><option value="">Tất cả trạng thái</option><option value="active" selected="@(status == "active")">Hoạt động</option><option value="locked" selected="@(status == "locked")">Đã khóa</option></select><button type="submit" class="ghost">Tìm kiếm</button></form>
+    <div class="table-scroll" tabindex="0" role="region" aria-label="Danh sách khách hàng, cuộn ngang để xem thao tác"><table><thead><tr><th scope="col">Khách hàng</th><th scope="col">Số điện thoại</th><th scope="col">Ngày sinh</th><th scope="col">Trạng thái</th><th scope="col">Thao tác</th></tr></thead><tbody>
+    @foreach (var c in Model)
+    {
+        <tr><td><div class="user-cell"><span class="avatar" aria-hidden="true">@(c.FullName.Length > 0 ? c.FullName[..1].ToUpperInvariant() : "K")</span><div><strong>@c.FullName</strong><small>@c.Email</small></div></div></td><td>@(c.Phone ?? "Chưa cập nhật")</td><td>@(c.BirthDate?.ToString("dd/MM/yyyy") ?? "Chưa cập nhật")</td><td><span class="badge @(c.IsDisabled ? "badge-disabled" : "")">@(c.IsDeleted ? "Đã lưu trữ" : c.IsDisabled ? "Đã khóa" : "Hoạt động")</span></td><td>
+        @if (!c.IsDeleted)
+        {
+            <div class="row-actions"><a class="table-action" href="/Crm/EditCustomer/@c.Id">Sửa hồ sơ</a>
+            @* Nhân viên chỉ sửa hồ sơ; khóa/xóa chỉ xuất hiện cho Manager và được chặn thêm ở server. *@
+            @if (User.IsInRole(Roles.Manager))
+            {
+                <form class="inline" action="/Crm/LockCustomer" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@c.Id"><input type="hidden" name="disabled" value="@((!c.IsDisabled).ToString().ToLowerInvariant())"><button type="submit" class="ghost" aria-label="@(c.IsDisabled ? "Mở khóa " : "Khóa ")@c.FullName">@(c.IsDisabled ? "Mở khóa" : "Khóa")</button></form>
+                <form class="inline" action="/Crm/ArchiveCustomer" method="post" data-confirm="Xóa khách hàng khỏi danh sách hoạt động và khóa tài khoản? Lịch sử phản hồi, khảo sát sẽ được lưu trữ.">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@c.Id"><input type="hidden" name="version" value="@c.ConcurrencyToken"><button type="submit" class="danger" aria-label="Xóa và lưu trữ @c.FullName">Xóa</button></form>
+            }
+            </div>
+        }
+        else { <span class="muted">Đã lưu trữ</span> }
+        </td></tr>
+    }
+    </tbody></table></div>
+    @if (Model.Length == 0) { <div class="empty"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#users" /></svg><h3>Chưa có khách hàng phù hợp</h3><p>Thử từ khóa khác hoặc thêm một khách hàng mới.</p><a href="/Crm/Customers">Xem danh sách hiện tại</a></div> }
+    <div class="table-footer">Hiển thị @Model.Length hồ sơ. Xóa khách hàng sẽ lưu trữ lịch sử và khóa tài khoản.</div>
+</section>

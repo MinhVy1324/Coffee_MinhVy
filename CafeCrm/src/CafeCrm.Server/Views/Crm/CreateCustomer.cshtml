@@ -1,3 +1,16 @@
-<h1>Thêm khách hàng</h1><form method="post" class="card stack">@Html.AntiForgeryToken()
-<label>Họ tên</label><input name="fullName" required maxlength="100"><label>Email</label><input name="email" type="email" required>
-<label>Mật khẩu ban đầu</label><input name="initialPassword" type="password" required minlength="8"><p class="muted">Bàn giao mật khẩu trực tiếp cho khách.</p><button>Tạo hồ sơ</button></form>
+@model CustomerCreateInput
+@{ ViewData["Title"] = "Thêm khách hàng"; }
+<div class="page-heading"><div><span class="eyebrow">THÊM MỘT KẾT NỐI MỚI</span><h1>Thêm khách hàng</h1><p class="subtitle">Bắt đầu với tài khoản, sau đó hoàn thiện hồ sơ và sở thích.</p></div><a class="button ghost" href="/Crm/Customers">Về danh sách</a></div>
+@* Staff và Manager đều được thêm khách. Server kiểm tra quyền tại CrmController. *@
+<div class="content-split">
+    <form method="post" action="/Crm/CreateCustomer" class="card form-card">
+        @Html.AntiForgeryToken()<div asp-validation-summary="All" class="validation-summary" role="alert"></div>
+        <h2>Thông tin tài khoản</h2><p class="section-description">Khách hàng dùng email này để đăng nhập và nhận khảo sát.</p>
+        <label asp-for="FullName">Họ và tên</label><input asp-for="FullName" placeholder="Ví dụ: Nguyễn Minh Anh" autocomplete="name" maxlength="100" required>
+        <label asp-for="Email">Địa chỉ email</label><input asp-for="Email" type="email" placeholder="khachhang@example.com" autocomplete="off" maxlength="256" required>
+        <label for="customer-password">Mật khẩu ban đầu</label><div class="password-field"><input id="customer-password" name="InitialPassword" type="password" minlength="8" autocomplete="new-password" placeholder="Tạo mật khẩu cho khách" aria-describedby="customer-password-hint" required><button type="button" class="icon-button" data-password-toggle="customer-password" aria-label="Hiện mật khẩu" aria-pressed="false" hidden><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#eye" /></svg></button></div>
+        <p id="customer-password-hint" class="form-hint">Ít nhất 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt.</p>
+        <div class="form-actions"><button type="submit"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#plus" /></svg>Tạo hồ sơ khách hàng</button><a class="button ghost" href="/Crm/Customers">Hủy</a></div>
+    </form>
+    <aside class="info-panel"><span class="section-icon"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#leaf" /></svg></span><h2>Chăm sóc từ lần đầu gặp.</h2><p>Sau khi tạo tài khoản, bổ sung ngày sinh và sở thích để quán hiểu khách hàng hơn.</p><ol><li>Tạo tài khoản khách hàng.</li><li>Cập nhật liên hệ và sở thích.</li><li>Bàn giao thông tin đăng nhập trực tiếp cho khách.</li></ol></aside>
+</div>

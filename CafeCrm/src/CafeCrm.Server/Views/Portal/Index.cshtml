@@ -1,0 +1,25 @@
+@model PortalOverview
+@{
+    ViewData["Title"] = "Góc của tôi";
+    var pending = Model.Invitations.Where(PortalLabels.Available).ToArray();
+    var answered = Model.Invitations.Count(x => x.HasResponded);
+    var replied = Model.Feedback.Count(x => x.Replies.Length > 0);
+}
+<div class="welcome-banner portal-welcome"><div><span class="eyebrow">MỘT GÓC QUEN, DÀNH RIÊNG CHO BẠN</span><h1>Chào @Model.Profile.FullName!</h1><p>Gửi một lời góp ý, chia sẻ sở thích và cùng quán làm mỗi lần ghé thêm đáng nhớ.</p><a class="button" href="/Portal/Feedback">Chia sẻ trải nghiệm<svg class="icon" aria-hidden="true"><use href="/img/icons.svg#arrow-right" /></svg></a></div><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#cup" /></svg></div>
+@* Số liệu lấy từ dữ liệu riêng của khách, không phải số trang trí cố định. *@
+<div class="grid metric portal-metrics">
+    <div class="card stat-card"><span class="stat-label">Khảo sát chờ bạn</span><span class="stat-icon amber"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#clipboard" /></svg></span><strong>@pending.Length</strong><small>Còn hạn và chưa trả lời</small></div>
+    <div class="card stat-card"><span class="stat-label">Trải nghiệm đã chia sẻ</span><span class="stat-icon"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#message" /></svg></span><strong>@Model.Feedback.Length</strong><small>@replied phản hồi đã được quán trả lời</small></div>
+    <div class="card stat-card"><span class="stat-label">Khảo sát đã hoàn thành</span><span class="stat-icon blue"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#check-circle" /></svg></span><strong>@answered</strong><small>Cảm ơn những đóng góp của bạn</small></div>
+</div>
+<div class="dashboard-grid portal-dashboard">
+    <section class="card"><div class="card-heading"><h2>Lời mời dành cho bạn</h2><a class="text-link" href="/Portal/Surveys">Xem tất cả</a></div><p class="section-description">Dành một chút thời gian để quán hiểu bạn hơn.</p>
+        @foreach (var invitation in pending.Take(3)) { <a class="quick-link" href="/Portal/Survey/@invitation.SurveyId"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#clipboard" /></svg><span><strong>@invitation.Title</strong><small>Trả lời trước @invitation.ClosesAtUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm")</small></span><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#arrow-right" /></svg></a> }
+        @if (pending.Length == 0) { <div class="portal-empty"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#leaf" /></svg><p>Bạn đã xem hết các lời mời đang mở.<br>Khảo sát mới sẽ xuất hiện khi quán gửi đến tài khoản.</p></div> }
+    </section>
+    <section class="card"><h2>Một chút về bạn</h2><p class="section-description">Thông tin và sở thích giúp quán chăm sóc bạn phù hợp hơn.</p><dl class="portal-profile"><dt>Email</dt><dd>@Model.Profile.Email</dd><dt>Điện thoại</dt><dd>@(Model.Profile.Phone ?? "Chưa bổ sung")</dd><dt>Ngày sinh</dt><dd>@(Model.Profile.BirthDate?.ToString("dd/MM/yyyy") ?? "Chưa bổ sung")</dd></dl><a class="button ghost" href="/Portal/Profile">Cập nhật hồ sơ<svg class="icon" aria-hidden="true"><use href="/img/icons.svg#arrow-right" /></svg></a></section>
+</div>
+<section class="card portal-recent"><div class="card-heading"><h2>Những chia sẻ gần đây</h2><a class="text-link" href="/Portal/Feedback">Xem lịch sử phản hồi</a></div>
+    @foreach (var item in Model.Feedback.Take(3)) { <div class="portal-feedback-row"><div><strong>@(item.ProductName ?? "Dịch vụ của quán")</strong><p>@item.CreatedAtUtc.AddHours(7).ToString("dd/MM/yyyy") · @item.Rating / 5 điểm</p></div><span class="badge status-@item.Status.ToString().ToLowerInvariant()">@CrmLabels.Feedback(item.Status)</span></div> }
+    @if (Model.Feedback.Length == 0) { <p class="section-description">Bạn chưa gửi phản hồi. Quán luôn sẵn sàng lắng nghe trải nghiệm của bạn.</p> }
+</section>

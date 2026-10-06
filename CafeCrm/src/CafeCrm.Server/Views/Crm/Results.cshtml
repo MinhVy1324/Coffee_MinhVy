@@ -1,6 +1,17 @@
 @model SurveyResults
-<h1>Kết quả khảo sát</h1><p class="subtitle">@Model.Title</p><div class="grid metric"><div class="card">Đã mời<strong>@Model.Invited</strong></div><div class="card">Đã trả lời<strong>@Model.Responded</strong></div><div class="card">Tỷ lệ tham gia<strong>@Model.ResponseRate%</strong></div></div>
-@foreach(var q in Model.Questions){<div class="card"><h2>@q.Text</h2><p>@q.Answered lượt trả lời @(q.AverageRating == null ? "" : "· Điểm trung bình " + q.AverageRating + "/5")</p>
-@foreach(var o in q.Options){<p>@o.Text · @o.Count lượt · @o.Percentage%</p><div class="bar"><span style="width:@(o.Percentage.ToString(System.Globalization.CultureInfo.InvariantCulture))%"></span></div>}
-@foreach(var t in q.TextAnswers){<p>@t</p>}</div>}
-<p class="muted">Tỷ lệ mỗi lựa chọn tính trên số người trả lời câu đó. Câu nhiều lựa chọn có tổng tỷ lệ vượt 100%.</p>
+@{ ViewData["Title"] = "Kết quả khảo sát"; var questionNumber = 0; }
+<div class="page-heading"><div><span class="eyebrow">NHỮNG ĐIỀU KHÁCH HÀNG CHIA SẺ</span><h1>Kết quả khảo sát</h1><p class="subtitle">@Model.Title</p></div><a class="button ghost" href="/Crm/Surveys">Về danh sách</a></div>
+<div class="grid metric"><div class="card stat-card"><span class="stat-label">Khách được mời</span><strong>@Model.Invited</strong><small>Lời mời đã gửi đến tài khoản</small></div><div class="card stat-card"><span class="stat-label">Khách đã trả lời</span><strong>@Model.Responded</strong><small>Mỗi khách được trả lời một lần</small></div><div class="card stat-card"><span class="stat-label">Tỷ lệ tham gia</span><strong>@Model.ResponseRate.ToString("0.##")%</strong><small>Số câu trả lời / số lời mời</small></div></div>
+@if (Model.Responded == 0) { <div class="notice">Chưa nhận được câu trả lời. Các thống kê sẽ cập nhật khi khách gửi khảo sát.</div> }
+@foreach (var q in Model.Questions)
+{
+    questionNumber++;
+    <section class="card result-question"><span class="eyebrow">CÂU @questionNumber · @CrmLabels.Question(q.Kind).ToUpperInvariant()</span><div class="item-heading"><h2>@q.Text</h2><span class="count-badge">@q.Answered lượt trả lời</span></div>
+        @if (q.Kind == QuestionKind.Rating) { <p class="rating-average">@(q.AverageRating?.ToString("0.##") ?? "—")<small> / 5 điểm trung bình</small></p> }
+        @foreach (var o in q.Options) { <div class="chart-row"><div class="chart-label"><strong>@o.Text</strong><span>@o.Count lượt <b>@o.Percentage.ToString("0.##")%</b></span></div><div class="bar chart-bar" role="img" aria-label="@o.Text: @o.Count lượt chọn, @o.Percentage phần trăm"><span style="width:@o.Percentage.ToString(System.Globalization.CultureInfo.InvariantCulture)%"></span></div></div> }
+        @foreach (var text in q.TextAnswers) { <blockquote class="text-answer">@text</blockquote> }
+        @if (q.Answered == 0) { <p class="form-hint">Chưa có câu trả lời cho câu hỏi này.</p> }
+        @if (q.Kind == QuestionKind.MultipleChoice) { <p class="form-hint">Khách được chọn nhiều đáp án; tổng các tỷ lệ có thể vượt 100%.</p> }
+    </section>
+}
+<p class="form-hint">Tỷ lệ mỗi lựa chọn tính trên số người trả lời câu đó. Khách bỏ qua câu không bắt buộc sẽ không tính vào mẫu số của câu đó.</p>

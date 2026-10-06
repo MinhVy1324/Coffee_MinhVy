@@ -5,10 +5,13 @@ namespace CafeCrm.Server.Data;
 
 public sealed class AppUser : IdentityUser
 {
+    // IdentityUser chứa PasswordHash và SecurityStamp, không chứa mật khẩu dạng rõ.
+    // IsDisabled là khóa do quản lý; LockoutEnd của Identity là khóa tạm do nhập sai.
     public bool IsDisabled { get; set; }
 }
 public sealed class Customer
 {
+    // Hồ sơ nghiệp vụ tách khỏi tài khoản đăng nhập, liên kết một-một bằng UserId.
     public Guid Id { get; set; } = Guid.NewGuid();
     public string UserId { get; set; } = "";
     public AppUser User { get; set; } = null!;
@@ -107,6 +110,7 @@ public sealed class SurveyOption
 }
 public sealed class SurveyInvitation
 {
+    // Gửi vào tài khoản = tạo lời mời liên kết khảo sát và khách; không phải gửi email.
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid SurveyId { get; set; }
     public Survey Survey { get; set; } = null!;
@@ -116,6 +120,7 @@ public sealed class SurveyInvitation
 }
 public sealed class SurveyResponse
 {
+    // Mỗi InvitationId có tối đa một response, chứa các answer theo từng câu hỏi.
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid InvitationId { get; set; }
     public SurveyInvitation Invitation { get; set; } = null!;
@@ -126,6 +131,7 @@ public sealed class SurveyResponse
 }
 public sealed class SurveyAnswer
 {
+    // TextValue/RatingValue/SelectedOptions dùng theo QuestionKind; service không nhận sai kiểu.
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid ResponseId { get; set; }
     public SurveyResponse Response { get; set; } = null!;

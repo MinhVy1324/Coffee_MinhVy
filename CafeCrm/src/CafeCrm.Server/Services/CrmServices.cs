@@ -18,8 +18,19 @@ public static class Rules
     public static void Validate(object value)
     {
         var errors = new List<ValidationResult>();
-        Require(Validator.TryValidateObject(value, new ValidationContext(value), errors, true),
-            string.Join(" ", errors.Select(x => x.ErrorMessage)));
+        var valid = Validator.TryValidateObject(value, new ValidationContext(value), errors, true);
+        // DTO record đặt DataAnnotations trên tham số constructor. MVC hiểu metadata này,
+        // nhưng TryValidateObject chỉ đọc attribute trên property, nên service phải đọc thêm.
+        // Nếu bỏ bước này, web gọi service trực tiếp có thể lọt rating/độ dài không hợp lệ.
+        var type = value.GetType();
+        var constructor = type.GetConstructors().FirstOrDefault(c => c.GetParameters().Length > 0
+            && c.GetParameters().All(p => p.Name != null && type.GetProperty(p.Name) != null));
+        if (constructor != null) foreach (var parameter in constructor.GetParameters()) {
+            var attributes = parameter.GetCustomAttributes(typeof(ValidationAttribute),true).Cast<ValidationAttribute>();
+            var context = new ValidationContext(value) { MemberName = parameter.Name, DisplayName = parameter.Name! };
+            valid = Validator.TryValidateValue(type.GetProperty(parameter.Name!)!.GetValue(value),context,errors,attributes) && valid;
+        }
+        Require(valid,string.Join(" ", errors.Select(x => x.ErrorMessage).Distinct()));
     }
     public static void Version(Guid actual, Guid expected) => Require(actual == expected,
         "Dữ liệu đã được sửa. Hãy tải lại trước khi lưu.", 409);
@@ -38,16 +49,18 @@ public sealed class CustomerService(CrmDbContext db, UserManager<AppUser> users)
     }
     public async Task Register(RegisterRequest request)
     {
-        Rules.Validate(request);
+        // Dùng cùng Create với nhân viên: tài khoản + hồ sơ + quyền phải cùng thành công.
+        // Transaction rollback nếu một bước lỗi, không để tài khoản thiếu hồ sơ.
         await Create(new(request.Email, request.FullName, request.Password), null);
     }
     public async Task<Guid> Create(CustomerCreate request, string? actor)
     {
+        request = request with { Email = request.Email?.Trim() ?? "", FullName = request.FullName?.Trim() ?? "" };
         Rules.Validate(request);
         await using var tx = await db.Database.BeginTransactionAsync();
         var user = new AppUser { UserName = request.Email.Trim(), Email = request.Email.Trim() };
         var result = await users.CreateAsync(user, request.InitialPassword);
-        Rules.Require(result.Succeeded, string.Join(" ", result.Errors.Select(x => x.Description)));
+        Rules.Require(result.Succeeded, string.Join(" ", result.Errors.Select(x => x.Description).Distinct()));
         var roleResult = await users.AddToRoleAsync(user, Roles.Customer);
         Rules.Require(roleResult.Succeeded, "Không thể cấp quyền khách hàng.");
         var customer = new Customer { UserId = user.Id, FullName = request.FullName.Trim() };
@@ -66,12 +79,14 @@ public sealed class CustomerService(CrmDbContext db, UserManager<AppUser> users)
     }
     public async Task Update(Guid id, ProfileUpdate request, string actor)
     {
+        // ConcurrencyToken từ lần đọc hồ sơ: từ chối ghi đè nếu phiên khác vừa sửa.
+        // Sở thích phải tồn tại; điện thoại không trùng hồ sơ hiện tại khác.
         Rules.Validate(request);
         var c = await db.Customers.Include(x => x.Preferences).SingleOrDefaultAsync(x => x.Id == id && !x.IsDeleted)
             ?? throw new CrmException(404, "Khách hàng không tồn tại.");
         Rules.Version(c.ConcurrencyToken, request.ConcurrencyToken);
         Rules.Require(!string.IsNullOrWhiteSpace(request.FullName), "Tên không được để trống.");
-        Rules.Require(request.BirthDate == null || request.BirthDate <= DateOnly.FromDateTime(DateTime.UtcNow), "Ngày sinh không hợp lệ.");
+        Rules.Require(request.BirthDate == null || request.BirthDate <= DateOnly.FromDateTime(DateTime.UtcNow.AddHours(7)), "Ngày sinh không hợp lệ.");
         var ids = (request.PreferenceIds ?? []).Distinct().ToArray();
         Rules.Require(await db.Preferences.CountAsync(x => ids.Contains(x.Id)) == ids.Length, "Sở thích không hợp lệ.");
         var phone = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim();
@@ -85,6 +100,8 @@ public sealed class CustomerService(CrmDbContext db, UserManager<AppUser> users)
     }
     public async Task SetDisabled(Guid id, bool disabled, string actor)
     {
+        // IsDisabled chặn lần đăng nhập mới; đổi SecurityStamp thu hồi cookie/token đang tồn tại.
+        // Quyền Manager được kiểm tra tại cả MVC controller và API controller trước khi gọi service.
         var c = await db.Customers.Include(x => x.User).SingleOrDefaultAsync(x => x.Id == id && !x.IsDeleted)
             ?? throw new CrmException(404, "Khách hàng không tồn tại.");
         c.User.IsDisabled = disabled; c.ConcurrencyToken = Guid.NewGuid();
@@ -93,6 +110,8 @@ public sealed class CustomerService(CrmDbContext db, UserManager<AppUser> users)
     }
     public async Task Archive(Guid id, Guid version, string actor)
     {
+        // Xóa mềm: không Remove(Customer), vì phản hồi/lời mời/câu trả lời còn tham chiếu hồ sơ.
+        // IsDeleted loại khách khỏi danh sách hoạt động, báo cáo cơ cấu và người nhận khảo sát mới.
         await using var tx = await db.Database.BeginTransactionAsync();
         var c = await db.Customers.Include(x => x.User).SingleOrDefaultAsync(x => x.Id == id && !x.IsDeleted)
             ?? throw new CrmException(404, "Khách hàng không tồn tại.");
@@ -108,6 +127,8 @@ public sealed class FeedbackService(CrmDbContext db)
 {
     public async Task<Guid> Create(Guid customerId, FeedbackCreate request)
     {
+        // CustomerId do controller lấy từ phiên; khách không được chọn chủ phản hồi.
+        // ProductId=null là dịch vụ chung; sản phẩm cụ thể phải còn hoạt động khi gửi.
         Rules.Validate(request);
         Rules.Require(!string.IsNullOrWhiteSpace(request.Content), "Nội dung không được để trống.");
         Rules.Require(request.ProductId == null || await db.Products.AnyAsync(x => x.Id == request.ProductId && x.IsActive), "Sản phẩm không tồn tại hoặc ngừng phục vụ.");
@@ -128,6 +149,8 @@ public sealed class FeedbackService(CrmDbContext db)
     }
     public async Task Reply(Guid id, FeedbackReply request, string staffId)
     {
+        // Nhân viên hoặc quản lý cùng xử lý. Lưu staffId để biết ai đã trả lời khách.
+        // ConcurrencyToken ngăn hai người xử lý cùng lúc ghi đè trạng thái của nhau.
         Rules.Validate(request);
         var f = await db.Feedbacks.FindAsync(id) ?? throw new CrmException(404, "Phản hồi không tồn tại.");
         Rules.Version(f.ConcurrencyToken, request.ConcurrencyToken);
@@ -203,6 +226,9 @@ public sealed class SurveyService(CrmDbContext db)
     }
     public async Task<int> Publish(Guid id, PublishRequest request)
     {
+        // Null = gửi tất cả khách hoạt động. Mảng rỗng = chưa chọn ai, không được hiểu là gửi tất cả.
+        // Sau phát hành, cấu trúc câu hỏi bị khóa; có thể gửi thêm khách chưa được mời.
+        Rules.Require(request.CustomerIds == null || request.CustomerIds.Length > 0,"Chọn ít nhất một khách hàng để gửi.");
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         var s = await Load(id); Rules.Version(s.ConcurrencyToken, request.ConcurrencyToken);
         Rules.Require(s.Status != SurveyStatus.Closed && s.ClosesAtUtc > DateTime.UtcNow, "Khảo sát đã đóng hoặc hết hạn.", 409);
@@ -227,22 +253,34 @@ public sealed class SurveyService(CrmDbContext db)
     public async Task<InvitationDto[]> Inbox(Guid customerId) => await db.SurveyInvitations.AsNoTracking()
         .Where(x => x.CustomerId == customerId).OrderByDescending(x => x.SentAtUtc)
         .Select(x => new InvitationDto(x.Id, x.SurveyId, x.Survey.Title, x.Survey.ClosesAtUtc,
-            db.SurveyResponses.Any(r => r.InvitationId == x.Id))).ToArrayAsync();
+            db.SurveyResponses.Any(r => r.InvitationId == x.Id), x.Survey.Status == SurveyStatus.Closed)).ToArrayAsync();
     public async Task<SurveyDto> ForCustomer(Guid surveyId, Guid customerId)
     {
         Rules.Require(await db.SurveyInvitations.AnyAsync(x => x.SurveyId == surveyId && x.CustomerId == customerId), "Không có quyền xem khảo sát này.", 404);
         return await Get(surveyId);
     }
+    public async Task<SurveyResponseDto?> ResponseForCustomer(Guid surveyId, Guid customerId)
+    {
+        // Điều kiện sở hữu nằm trong query, không lấy câu trả lời rồi mới lọc trên trình duyệt.
+        Rules.Require(await db.SurveyInvitations.AnyAsync(x => x.SurveyId == surveyId && x.CustomerId == customerId), "Không có quyền xem khảo sát này.", 404);
+        var response = await db.SurveyResponses.AsNoTracking().Include(x => x.Answers).ThenInclude(x => x.SelectedOptions)
+            .SingleOrDefaultAsync(x => x.SurveyId == surveyId && x.Invitation.CustomerId == customerId);
+        return response == null ? null : new(response.SubmittedAtUtc, response.Answers.Select(a =>
+            new AnswerInput(a.QuestionId,a.TextValue,a.RatingValue,a.SelectedOptions.Select(o => o.OptionId).ToArray())).ToArray());
+    }
     public async Task<Guid> Submit(Guid surveyId, Guid customerId, SubmitResponse input)
     {
+        // Chỉ một lần mỗi lời mời, đúng hạn/kiểu câu hỏi và đủ câu bắt buộc.
+        // Transaction + unique index InvitationId chặn hai request gửi đồng thời.
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         var s = await Load(surveyId);
         Rules.Require(s.Status == SurveyStatus.Published && s.ClosesAtUtc > DateTime.UtcNow, "Khảo sát đã đóng hoặc hết hạn.", 409);
         var invitation = await db.SurveyInvitations.SingleOrDefaultAsync(x => x.SurveyId == surveyId && x.CustomerId == customerId)
-            ?? throw new CrmException(404, "Ông chưa được mời tham gia khảo sát này.");
+            ?? throw new CrmException(404, "Bạn chưa được mời tham gia khảo sát này.");
         Rules.Require(!await db.SurveyResponses.AnyAsync(x => x.InvitationId == invitation.Id), "Khảo sát đã được trả lời.", 409);
         Rules.Require(input.Answers != null, "Câu trả lời không hợp lệ.");
         var answers = input.Answers!;
+        Rules.Require(answers.All(x => x != null), "Câu trả lời không hợp lệ.");
         Rules.Require(answers.Select(x => x.QuestionId).Distinct().Count() == answers.Length, "Câu hỏi bị lặp.");
         Rules.Require(answers.All(a => s.Questions.Any(q => q.Id == a.QuestionId)), "Câu hỏi thuộc khảo sát khác.");
         var response = new SurveyResponse { InvitationId = invitation.Id, SurveyId = surveyId };
@@ -268,6 +306,9 @@ public sealed class SurveyService(CrmDbContext db)
     }
     public async Task<SurveyResults> Results(Guid id)
     {
+        // Tỷ lệ tham gia = số người trả lời / số lời mời.
+        // Tỷ lệ đáp án = số lượt chọn / số người trả lời CÂU ĐÓ (có thể khác số người trả lời khảo sát).
+        // Câu chọn nhiều đáp án có thể có tổng tỷ lệ >100%; không cộng rồi ép về 100%.
         var s = await Load(id);
         var invited = await db.SurveyInvitations.CountAsync(x => x.SurveyId == id);
         var responses = await db.SurveyResponses.Include(x => x.Answers).ThenInclude(x => x.SelectedOptions).Where(x => x.SurveyId == id).ToListAsync();
@@ -290,7 +331,8 @@ public sealed class ReportService(CrmDbContext db)
         var customers = await db.Customers.AsNoTracking().Include(x => x.Preferences).ThenInclude(x => x.Preference)
             .Include(x => x.User).Where(x => !x.IsDeleted).ToListAsync();
         var active = customers.Where(x => !x.User.IsDisabled).ToList();
-        // Calculate ages in the cafe's business timezone, including birthdays later this year.
+        // Báo cáo tuổi/sở thích chỉ tính khách chưa xóa và không bị khóa.
+        // Tính tuổi theo ngày Việt Nam, trừ một tuổi nếu năm nay chưa đến sinh nhật.
         var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(7));
         var groups = new Dictionary<string,int> { ["Dưới 18"] = 0, ["18 đến 24"] = 0, ["25 đến 34"] = 0, ["35 đến 44"] = 0, ["Từ 45"] = 0, ["Chưa có ngày sinh"] = 0 };
         foreach (var c in active) {
@@ -300,6 +342,7 @@ public sealed class ReportService(CrmDbContext db)
             groups[age < 18 ? "Dưới 18" : age < 25 ? "18 đến 24" : age < 35 ? "25 đến 34" : age < 45 ? "35 đến 44" : "Từ 45"]++;
         }
         var ratings = await db.Feedbacks.Select(x => x.Rating).ToListAsync();
+        // Phản hồi và khảo sát giữ toàn bộ lịch sử; khách đã lưu trữ vẫn có đóng góp trong các tổng này.
         var prefs = await db.Preferences.AsNoTracking().ToListAsync();
         return new(active.Count, customers.Count(x => x.User.IsDisabled), ratings.Count,
             ratings.Count == 0 ? null : Math.Round((decimal)ratings.Average(),2),
