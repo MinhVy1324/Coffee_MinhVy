@@ -6,7 +6,7 @@ using CafeCrm.Contracts;
 
 namespace CafeCrm.Client;
 
-public interface ITokenStore
+public interface ITokenStore // interface giao diện 
 {
     Task<string?> Read();
     Task Write(string value);
@@ -14,10 +14,10 @@ public interface ITokenStore
 }
 public sealed class ApiException(HttpStatusCode status, string message) : Exception(message)
 { public HttpStatusCode Status { get; } = status; }
-public sealed class CrmApiClient(HttpClient http, ITokenStore store)
+public sealed class CrmApiClient(HttpClient http, ITokenStore store) //contructor 
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private readonly SemaphoreSlim refreshLock = new(1,1);
+    private readonly SemaphoreSlim refreshLock = new(1,1);//đây là mọt ổ lock cho phep xư li    
     private TokenResponse? tokens;
     public async Task<bool> RestoreSession() {
         var saved = await store.Read();

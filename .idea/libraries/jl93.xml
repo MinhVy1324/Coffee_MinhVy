@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="jl93">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/CafeCrm-Git/src/CafeCrm.Mobile/obj/Debug/net10.0-android/lp/135/jl/classes.jar!/" />
+      <root url="jar://$PROJECT_DIR$/CafeCrm-Git/src/CafeCrm.Mobile/obj/Debug/net10.0-android/lp/135/jl/annotations.zip!/" />
+      <root url="jar://$PROJECT_DIR$/CafeCrm-Git/src/CafeCrm.Mobile/obj/Debug/net10.0-android/lp/135/jl/res.zip!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
